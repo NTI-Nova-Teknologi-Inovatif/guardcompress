@@ -119,6 +119,22 @@ func TestSymlinkRejected(t *testing.T) {
 	}
 }
 
+func TestUppercaseVariantsBlocked(t *testing.T) {
+	for _, payload := range []string{
+		"EVAL(BASE64_DECODE(\"eA==\"));",
+		"<ScRiPt>alert(1)</ScRiPt>",
+		"<?php SHELL_EXEC(\"id\"); ?>",
+		"<?php $h = popen(\"ls\",\"r\"); ?>",
+	} {
+		png := []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}
+		p := writeTmp(t, "upper.png", append(png, payload...))
+		r, _ := Scan(p, map[string]any{})
+		if r.Allowed {
+			t.Fatalf("harusnya BLOCKED: %s", payload)
+		}
+	}
+}
+
 func TestPayloadInMiddleOfLargeFile(t *testing.T) {
 	// Regression blind-spot: payload di tengah file 40MB HARUS ketemu
 	// (streaming scan, bukan head+tail).

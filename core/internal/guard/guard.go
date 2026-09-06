@@ -33,13 +33,36 @@ var defaultAllow = []string{
 }
 
 // Token berbahaya: webshell / script polyglot yang sering ditempel di media.
+// fold=true untuk pola yang case-insensitive di engine aslinya
+// (fungsi PHP & tag HTML tidak peduli huruf besar/kecil).
 // Varian UTF-16-LE/BE dari "<?php" ikut dipindai (webshell unicode).
-var suspiciousTokens = [][]byte{
-	[]byte("<?php"), []byte("<?="), []byte("<%"), []byte("<script"),
-	[]byte("eval("), []byte("base64_decode"), []byte("c99shell"), []byte("r57shell"),
-	{'<', 0, '?', 0, 'p', 0, 'h', 0, 'p', 0}, // "<?php" UTF-16LE
-	{0, '<', 0, '?', 0, 'p', 0, 'h', 0, 'p'}, // "<?php" UTF-16BE
-	[]byte("X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR"),
+type token struct {
+	pat  []byte
+	fold bool
+}
+
+var suspiciousTokens = []token{
+	{[]byte("<?php"), false}, // tag PHP wajib lowercase di engine
+	{[]byte("<?="), false},
+	{[]byte("<%"), false},
+	{[]byte("<script"), true}, // HTML case-insensitive
+	{[]byte("eval("), true},   // konstruksi PHP case-insensitive
+	{[]byte("assert("), true},
+	{[]byte("base64_decode"), true}, // fungsi PHP case-insensitive
+	{[]byte("str_rot13"), true},
+	{[]byte("gzinflate"), true},
+	{[]byte("create_function"), true},
+	{[]byte("shell_exec"), true},
+	{[]byte("passthru"), true},
+	{[]byte("popen("), true},
+	{[]byte("proc_open("), true},
+	{[]byte("c99shell"), false},
+	{[]byte("r57shell"), false},
+	{[]byte("cmd.exe"), true},
+	{[]byte("/bin/sh"), false},
+	{[]byte{'<', 0, '?', 0, 'p', 0, 'h', 0, 'p', 0}, false}, // "<?php" UTF-16LE
+	{[]byte{0, '<', 0, '?', 0, 'p', 0, 'h', 0, 'p'}, false}, // "<?php" UTF-16BE
+	{[]byte("X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR"), false},
 }
 
 func (r Result) SafeExt() string {
@@ -190,9 +213,16 @@ func streamScan(f *os.File, size int64) (string, string) {
 		window := make([]byte, 0, len(prev)+len(chunk))
 		window = append(window, prev...)
 		window = append(window, chunk...)
+		// Varian lowercase sekali per window untuk token fold (ASCII-only
+		// agar offset tetap 1:1 dengan buffer asli).
+		lowered := asciiLower(window)
 		for _, tok := range suspiciousTokens {
-			if foundAt(window, tok) {
-				shown := string(tok)
+			hay := window
+			if tok.fold {
+				hay = lowered
+			}
+			if foundAt(hay, window, tok.pat) {
+				shown := string(tok.pat)
 				if len(shown) > 24 {
 					shown = shown[:24] + "..."
 				}
@@ -212,28 +242,26 @@ func streamScan(f *os.File, size int64) (string, string) {
 	return "", ""
 }
 
-// foundAt: cari token di buf. Token pendek ("<%", "eval(") hanya dihitung
-// bila duduk di dalam LAJU TEKS printable yang panjang (>=24): kode script
-// itu teks bersambung, sedangkan kebetulan biner tidak pernah membentuk
-// laju printable 24+ (peluang ~0.38^24). Padding biner di satu sisi tidak
-// menolong penyerang karena laju tetap memanjang ke sisi kode.
+// foundAt: cari pat di hay (hay boleh versi lowercase dari orig).
+// Token pendek hanya dihitung bila duduk di laju teks printable >=24
+// (dicek pada ORIG agar tidak terpengaruh lowering).
 // Token panjang & unik (EICAR, UTF-16) cocok langsung tanpa cek konteks.
-func foundAt(buf, tok []byte) bool {
-	if isDirectToken(tok) {
-		return bytes.Contains(buf, tok)
+func foundAt(hay, orig, pat []byte) bool {
+	if isDirectToken(pat) {
+		return bytes.Contains(hay, pat)
 	}
 	start := 0
 	for {
-		i := bytes.Index(buf[start:], tok)
+		i := bytes.Index(hay[start:], pat)
 		if i < 0 {
 			return false
 		}
 		at := start + i
-		if inTextRun(buf, at, len(tok)) {
+		if inTextRun(orig, at, len(pat)) {
 			return true
 		}
 		start = at + 1
-		if start >= len(buf) {
+		if start >= len(hay) {
 			return false
 		}
 	}
@@ -263,4 +291,17 @@ func inTextRun(buf []byte, at, tokLen int) bool {
 
 func isPrintable(b byte) bool {
 	return b == 9 || b == 10 || b == 13 || (b >= 32 && b < 127)
+}
+
+// asciiLower: lowercase ASCII-only (A-Z -> a-z), byte lain utuh.
+// Panjang & offset dijamin 1:1 dengan input (aman untuk pemetaan temuan).
+func asciiLower(b []byte) []byte {
+	out := make([]byte, len(b))
+	for i, c := range b {
+		if c >= 'A' && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		out[i] = c
+	}
+	return out
 }

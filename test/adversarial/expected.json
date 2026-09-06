@@ -1,0 +1,16 @@
+{
+  "01-tail.png": "blocked",
+  "02-upper.png": "blocked",
+  "03-obfuscated.png": "blocked",
+  "04-asp.png": "blocked",
+  "05-xss.png": "blocked",
+  "06-utf16le.png": "blocked",
+  "07-chunk-boundary.png": "blocked",
+  "08-middle-5mb.png": "blocked",
+  "09-binary-padded.png": "blocked",
+  "10-double-ext.png.phtml": "blocked",
+  "11-avtest-string.png": "blocked",
+  "12-control-clean.png": "clean",
+  "13-control-binary.png": "clean",
+  "14-cmd.png": "blocked"
+}
