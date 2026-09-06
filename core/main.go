@@ -72,6 +72,15 @@ func runCheck() {
 
 	start := time.Now()
 	report := Report{InPath: *inPath, Details: map[string]any{}}
+	// Struktur output di out-dir (gampang dicek manual):
+	//   <nama-aman>.<ext> + report.json (selalu ditulis, blocked pun ada jejaknya)
+	saveReport := func() {
+		if *outDir == "" {
+			return
+		}
+		b, _ := json.MarshalIndent(report, "", "  ")
+		_ = os.WriteFile(filepath.Join(*outDir, "report.json"), b, 0o644)
+	}
 	fail := func(msg string, code int) {
 		report.Status = "blocked"
 		if code == 1 {
@@ -79,6 +88,7 @@ func runCheck() {
 		}
 		report.Reason = msg
 		report.TookMs = time.Since(start).Milliseconds()
+		saveReport()
 		b, _ := json.Marshal(report)
 		fmt.Println(string(b))
 		os.Exit(code)
@@ -112,7 +122,7 @@ func runCheck() {
 		fail("input changed after scan (possible race), abort", 1)
 	}
 
-	outPath := filepath.Join(*outDir, "output"+gres.SafeExt())
+	outPath := filepath.Join(*outDir, guard.OutputName(*inPath, gres.Mime, cfg))
 	cres, err := compress.Run(*inPath, outPath, gres.Mime, cfg)
 	if err != nil {
 		fail("compress error: "+err.Error(), 1)
@@ -123,6 +133,7 @@ func runCheck() {
 
 	report.Status = "clean"
 	report.TookMs = time.Since(start).Milliseconds()
+	saveReport()
 	b, _ := json.Marshal(report)
 	fmt.Println(string(b))
 }

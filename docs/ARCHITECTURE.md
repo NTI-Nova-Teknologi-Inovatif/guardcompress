@@ -18,6 +18,16 @@ Upload tmp -> wrapper proses():
   <- stdout report.json -> wrapper raise/return -> app simpan ke S3/DB
 ```
 
+## 2b. Struktur output (gampang dicek manual)
+```
+<out-dir>/
+  video_liburan_anak.mp4   # nama ikut file asli, disanitasi; ext SELALU dari MIME asli
+  report.json              # laporan pretty-print (ada juga saat blocked, tanpa file media)
+```
+Opsi penamaan via `--config {"output": ...}`:
+`original` (default) | `uuid` (acak 16 hex) | `"teks kustom"` (disanitasi).
+Contoh: `evil.mp4.php` -> `evil_mp4_php.mp4`, `../../etc/passwd` -> `passwd.bin`.
+
 ## 3. Dependensi
 | Komponen | Strategi v1 | Roadmap v2 |
 |---|---|---|
