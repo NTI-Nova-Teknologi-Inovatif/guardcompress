@@ -14,6 +14,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"time"
 )
 
@@ -58,9 +60,18 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	if v, ok := cfg["video_crf"]; ok {
 		crf = fmt.Sprintf("%v", v)
 	}
+	// AUDIT: validasi angka config (fail-closed dengan pesan jelas, bukan
+	// error ffmpeg misterius; nilai liar tak bisa mengubah bentuk perintah
+	// karena argv tanpa shell, tapi tetap ditolak tegas).
+	if n, err := strconv.Atoi(crf); err != nil || n < 0 || n > 51 {
+		return res, fmt.Errorf("invalid video_crf (0-51): %v", cfg["video_crf"])
+	}
 	abitrate := "96k"
 	if v, ok := cfg["audio_bitrate"]; ok {
 		abitrate = fmt.Sprintf("%v", v)
+	}
+	if ok, _ := regexp.MatchString(`^[0-9]+k$`, abitrate); !ok {
+		return res, fmt.Errorf("invalid audio_bitrate (cth 96k): %v", cfg["audio_bitrate"])
 	}
 
 	var args []string
@@ -78,9 +89,15 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		if v, ok := cfg["image_max_dim"]; ok {
 			maxDim = fmt.Sprintf("%v", v)
 		}
+		if n, err := strconv.Atoi(maxDim); err != nil || n < 64 || n > 8192 {
+			return res, fmt.Errorf("invalid image_max_dim (64-8192): %v", cfg["image_max_dim"])
+		}
 		q := "82"
 		if v, ok := cfg["image_quality"]; ok {
 			q = fmt.Sprintf("%v", v)
+		}
+		if n, err := strconv.Atoi(q); err != nil || n < 1 || n > 100 {
+			return res, fmt.Errorf("invalid image_quality (1-100): %v", cfg["image_quality"])
 		}
 		// Kecilkan dimensi bila lebih besar dari maxDim, pertahankan aspek.
 		// JPEG/WebP: quality terkontrol. PNG: kompresi max (lossless).
@@ -107,6 +124,9 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	ctx, cancel := ctxTimeout(cfg)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, ff, args...)
+	// AUDIT: di Linux, ffmpeg ikut mati bila core mati mendadak.
+	// (lihat procattr_linux.go; no-op di OS lain)
+	setDeathsig(cmd)
 	out, err := cmd.CombinedOutput()
 	res.Details["ffmpeg"] = ff
 	res.Details["ffmpeg_log_tail"] = tail(string(out), 2000)

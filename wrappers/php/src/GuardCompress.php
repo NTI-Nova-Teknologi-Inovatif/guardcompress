@@ -8,7 +8,14 @@ class GuardCompress
     public static function process(string $inPath, array $opts = []): GuardResult
     {
         $bin = self::resolveBinary();
-        $outDir = sys_get_temp_dir() . '/gc-' . uniqid();
+        // AUDIT: suffix acak kriptografis (bukan uniqid yang bisa ditebak)
+        // agar user lain tak bisa menebak & mengintip folder tmp.
+        try {
+            $suffix = bin2hex(random_bytes(8));
+        } catch (\Throwable) {
+            $suffix = uniqid('', true);
+        }
+        $outDir = sys_get_temp_dir() . '/gc-' . $suffix;
         // AUDIT: 0700 (bukan 0777) agar user lain di shared hosting tak bisa intip file.
         if (!mkdir($outDir, 0700, true) && !is_dir($outDir)) {
             throw new \RuntimeException("cannot create tmp dir: $outDir");

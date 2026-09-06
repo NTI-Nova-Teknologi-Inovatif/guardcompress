@@ -47,3 +47,10 @@ Contoh: `evil.mp4.php` -> `evil_mp4_php.mp4`, `../../etc/passwd` -> `passwd.bin`
 - AUDIT: report JSON berisi path server (`in_path`, `ffmpeg`) — jangan kirim
   mentah ke browser, kirim ringkasannya saja (`stored_at`, ukuran).
 - AUDIT: symlink input ditolak; ukuran input dicek ulang setelah scan (TOCTOU).
+- AUDIT: output yang sama dengan input ditolak (anti overwrite diri via CLI).
+- AUDIT: config angka divalidasi (crf 0-51, bitrate `^\d+k$`, max_dim, quality).
+- AUDIT: tmp PHP pakai `random_bytes`, folder 0700.
+- Risiko sisa (diterima sadar): lirik MP3 berisi kata "eval(" ikut diblokir
+  (fail-closed); CHECKSUMS rilis hanya dilindungi TLS (roadmap: cosign);
+  orphan ffmpeg bila WRAPPER di-kill paksa di Windows (core-kill aman via
+  timeout; Linux aman via Pdeathsig).

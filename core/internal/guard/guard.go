@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
 type Result struct {
 	Mime    string
 	Size    int64
+	ModNano int64 // mtime untuk cek ulang TOCTOU di main
 	Allowed bool
 	Reason  string
 	Details map[string]any
@@ -89,6 +91,20 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		return res, err
 	}
 	res.Size = fi.Size()
+	res.ModNano = fi.ModTime().UnixNano()
+
+	// AUDIT: tolak Windows ADS ("file.png:evil") — stream alternatif bisa
+	// menyembunyikan konten dari pemindaian / penulisan biasa.
+	if runtime.GOOS == "windows" {
+		rest := path
+		if len(rest) > 2 && rest[1] == ':' {
+			rest = rest[2:]
+		}
+		if strings.Contains(rest, ":") {
+			res.Reason = "alternate data stream not allowed"
+			return res, nil
+		}
+	}
 
 	maxMB := 500.0
 	if v, ok := cfg["max_mb"].(float64); ok && v > 0 {

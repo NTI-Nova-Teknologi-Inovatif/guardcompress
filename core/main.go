@@ -117,12 +117,18 @@ func runCheck() {
 	}
 
 	// AUDIT TOCTOU: file bisa diganti penyerang di antara scan & kompres
-	// (sharing tmp). Batalkan bila ukuran berubah setelah scan.
-	if fi2, err := os.Stat(*inPath); err != nil || fi2.Size() != gres.Size {
+	// (sharing tmp). Batalkan bila ukuran ATAU waktu-ubah berubah setelah scan.
+	if fi2, err := os.Stat(*inPath); err != nil || fi2.Size() != gres.Size ||
+		fi2.ModTime().UnixNano() != gres.ModNano {
 		fail("input changed after scan (possible race), abort", 1)
 	}
 
 	outPath := filepath.Join(*outDir, guard.OutputName(*inPath, gres.Mime, cfg))
+	// AUDIT: tolak bila output = file input itu sendiri (CLI user bisa
+	// mengarah --out-dir ke folder input; ffmpeg -y akan menghancurkan input).
+	if same, _ := samePathFile(*inPath, outPath); same {
+		fail("refusing: output path equals input (use a different --out-dir)", 1)
+	}
 	cres, err := compress.Run(*inPath, outPath, gres.Mime, cfg)
 	if err != nil {
 		fail("compress error: "+err.Error(), 1)
@@ -191,4 +197,26 @@ try {
     return response()->json(['blocked'=>$e->getMessage()], 422);
 }`
 	}
+}
+
+// samePathFile: true bila outPath menunjuk file yang sama dengan inPath
+// (banding path absolut + SameFile bila target sudah ada).
+func samePathFile(inPath, outPath string) (bool, error) {
+	ai, err := filepath.Abs(inPath)
+	if err != nil {
+		return false, err
+	}
+	ao, err := filepath.Abs(outPath)
+	if err != nil {
+		return false, err
+	}
+	if ai == ao {
+		return true, nil
+	}
+	fi, err1 := os.Stat(ai)
+	fo, err2 := os.Stat(ao)
+	if err1 == nil && err2 == nil && os.SameFile(fi, fo) {
+		return true, nil
+	}
+	return false, nil
 }

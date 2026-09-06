@@ -65,3 +65,38 @@ func TestImageCompressReal(t *testing.T) {
 	}
 	t.Logf("image compressed OK: %d bytes", res.NewBytes)
 }
+
+func TestInvalidConfigRejected(t *testing.T) {
+	// AUDIT: nilai config liar harus ditolak tegas sebelum ffmpeg dipanggil.
+	// Paksa mode copy (ffmpeg absen mustahil di sini) — validasi jalan duluan
+	// hanya untuk branch ffmpeg; guard-only copy tidak butuh crf. Maka uji
+	// butuh ffmpeg: skip bila absen.
+	if FindFFmpeg() == "" {
+		t.Skip("butuh ffmpeg untuk capai validasi angka")
+	}
+	tmp := t.TempDir()
+	src := tmp + "/s.mp4"
+	if err := os.WriteFile(src, []byte{0, 0, 0, 24, 'f', 't', 'y', 'p'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for label, cfg := range map[string]map[string]any{
+		"crf-negatif":  {"video_crf": -5},
+		"crf-lewat":    {"video_crf": 99},
+		"crf-teks":     {"video_crf": "x"},
+		"bitrate-aneh": {"audio_bitrate": "96k;rm -rf /"},
+	} {
+		if _, err := Run(src, tmp+"/o.mp4", "video/mp4", cfg); err == nil {
+			t.Fatalf("%s harusnya ditolak", label)
+		} else {
+			t.Logf("%s ditolak: %v", label, err)
+		}
+	}
+	if _, err := Run(src, tmp+"/o.jpg", "image/jpeg",
+		map[string]any{"image_max_dim": 0}); err == nil {
+		t.Fatal("image_max_dim=0 harusnya ditolak")
+	}
+	if _, err := Run(src, tmp+"/o.jpg", "image/jpeg",
+		map[string]any{"image_quality": 500}); err == nil {
+		t.Fatal("image_quality=500 harusnya ditolak")
+	}
+}

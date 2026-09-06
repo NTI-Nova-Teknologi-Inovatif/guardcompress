@@ -3,6 +3,7 @@ package guard
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -153,5 +154,23 @@ func TestPayloadInMiddleOfLargeFile(t *testing.T) {
 	}
 	if r.Allowed {
 		t.Fatal("harusnya BLOCKED (payload di tengah file besar lolos!)")
+	}
+}
+
+func TestADSRejected(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("ADS hanya ada di Windows")
+	}
+	base := writeTmp(t, "host.png", []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0})
+	ads := base + ":evil"
+	if err := os.WriteFile(ads, []byte("x"), 0o644); err != nil {
+		t.Skip("ADS tak didukung di volume ini: " + err.Error())
+	}
+	r, err := Scan(ads, map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Allowed {
+		t.Fatal("harusnya BLOCKED (ADS)")
 	}
 }
