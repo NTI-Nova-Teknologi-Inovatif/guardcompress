@@ -123,14 +123,15 @@ func runCheck() {
 func runDoctor() {
 	ff := compress.FindFFmpeg()
 	info := map[string]any{
-		"version": Version,
-		"ffmpeg":  ff,
+		"version":      Version,
+		"ffmpeg":       ff,
 		"ffmpeg_found": ff != "",
-		"cache_dir": compress.CacheDir(),
-		"os":        filepath.Base(os.TempDir()),
+		"cache_dir":    compress.CacheDir(),
 	}
-	if ff == "" {
-		info["hint"] = "ffmpeg tidak ketemu, mode guard-only (copy). Set GUARDCOMPRESS_FFMPEG ke path ffmpeg static."
+	if ff != "" {
+		info["ffmpeg_version"] = compress.ProbeFFmpegVersion(ff)
+	} else {
+		info["hint"] = "ffmpeg tidak ketemu, mode guard-only (copy). Jalankan installer wrapper / set GUARDCOMPRESS_FFMPEG."
 	}
 	b, _ := json.MarshalIndent(info, "", "  ")
 	fmt.Println(string(b))

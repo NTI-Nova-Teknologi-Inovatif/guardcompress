@@ -70,7 +70,28 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 			outPath}
 	case len(mime) >= 5 && mime[:5] == "audio":
 		args = []string{"-y", "-i", inPath, "-codec:a", "libmp3lame", "-b:a", abitrate, outPath}
-	default: // image & lain: copy saja di v1
+	case mime == "image/jpeg" || mime == "image/png" || mime == "image/webp":
+		maxDim := "1920"
+		if v, ok := cfg["image_max_dim"]; ok {
+			maxDim = fmt.Sprintf("%v", v)
+		}
+		q := "82"
+		if v, ok := cfg["image_quality"]; ok {
+			q = fmt.Sprintf("%v", v)
+		}
+		// Kecilkan dimensi bila lebih besar dari maxDim, pertahankan aspek.
+		// JPEG/WebP: quality terkontrol. PNG: kompresi max (lossless).
+		args = []string{"-y", "-i", inPath,
+			"-vf", "scale=w='min(" + maxDim + ",iw)':h='-2'",
+			"-q:v", q,
+			outPath}
+		if mime == "image/png" {
+			args = []string{"-y", "-i", inPath,
+				"-vf", "scale=w='min(" + maxDim + ",iw)':h='-2'",
+				"-compression_level", "9",
+				outPath}
+		}
+	default: // mime tak dikenal (tak lolos guard normal): copy aman
 		if err := copyFile(inPath, outPath); err != nil {
 			return res, err
 		}
@@ -80,7 +101,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		res.Details["ffmpeg"] = ff
 		return res, nil
 	}
-
 	cmd := exec.Command(ff, args...)
 	out, err := cmd.CombinedOutput()
 	res.Details["ffmpeg"] = ff
@@ -125,4 +145,23 @@ func CacheDir() string {
 		return filepath.Join(h, ".cache", "guardcompress")
 	}
 	return filepath.Join(os.TempDir(), "guardcompress-cache")
+}
+
+// ProbeFFmpegVersion: baris pertama `ffmpeg -version`, "" bila gagal.
+func ProbeFFmpegVersion(ff string) string {
+	cmd := exec.Command(ff, "-version")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	line := string(out)
+	for i, c := range line {
+		if c == '\n' {
+			return line[:i]
+		}
+	}
+	if len(line) > 120 {
+		return line[:120]
+	}
+	return line
 }

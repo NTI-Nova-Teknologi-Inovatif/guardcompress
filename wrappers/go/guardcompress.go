@@ -33,6 +33,7 @@ func Process(inPath string, opts map[string]any) (Result, error) {
 	var report map[string]any
 	_ = json.Unmarshal(lastLine(out), &report)
 	if err != nil {
+		os.RemoveAll(outDir) // gagal/blocked: buang output
 		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 2 {
 			return Result{}, fmt.Errorf("blocked: %v", report["reason"])
 		}

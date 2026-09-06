@@ -123,7 +123,7 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		res.Details["scan"] = "head+tail 32MB"
 	}
 	for _, tok := range suspiciousTokens {
-		if bytes.Contains(buf, tok) {
+		if foundAt(buf, tok) {
 			shown := string(tok)
 			if len(shown) > 24 {
 				shown = shown[:24] + "..."
@@ -166,4 +166,53 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// foundAt: cari token di buf, tapi hanya hitung bila konteks sekitarnya
+// terlihat seperti teks (kode script itu teks). Data biner video terkompresi
+// bisa mengandung "<%" / "eval(" secara kebetulan di antara byte acak.
+// EICAR (68 char) cukup unik -> cocok langsung tanpa cek konteks.
+func foundAt(buf, tok []byte) bool {
+	if bytes.Equal(tok, []byte("X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR")) {
+		return bytes.Contains(buf, tok)
+	}
+	start := 0
+	for {
+		i := bytes.Index(buf[start:], tok)
+		if i < 0 {
+			return false
+		}
+		at := start + i
+		if isTextWindow(buf, at, len(tok)) {
+			return true
+		}
+		start = at + 1
+		if start >= len(buf) {
+			return false
+		}
+	}
+}
+
+// isTextWindow: >70% byte di jendela ±64 sekitar temuan harus printable ASCII.
+func isTextWindow(buf []byte, at, tokLen int) bool {
+	const W = 64
+	s := at - W
+	if s < 0 {
+		s = 0
+	}
+	e := at + tokLen + W
+	if e > len(buf) {
+		e = len(buf)
+	}
+	win := buf[s:e]
+	if len(win) == 0 {
+		return false
+	}
+	printable := 0
+	for _, b := range win {
+		if b == 9 || b == 10 || b == 13 || (b >= 32 && b < 127) {
+			printable++
+		}
+	}
+	return float64(printable)/float64(len(win)) > 0.7
 }

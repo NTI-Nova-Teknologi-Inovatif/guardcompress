@@ -20,16 +20,40 @@ class GuardCompress
             . ' --json 2>&1';
 
         exec($cmd, $lines, $code);
-        $json = implode("\n", $lines);
-        $report = json_decode($json, true) ?? ['reason' => $json];
+        // Ambil baris JSON terakhir (abaikan log lain)
+        $json = trim(implode("\n", $lines));
+        $last = substr($json, strrpos($json, "\n") === false ? 0 : strrpos($json, "\n") + 1);
+        $report = json_decode($last, true) ?? ['reason' => $json];
 
         if ($code === 2) {
+            self::rmDir($outDir); // file kotor: buang output
             throw new InfectedFileException($report['reason'] ?? 'blocked', $report);
         }
         if ($code !== 0) {
+            self::rmDir($outDir);
             throw new GuardException($report['reason'] ?? 'guardcompress failed', $report);
         }
+        if (empty($report['out_path']) || !is_file($report['out_path'])) {
+            self::rmDir($outDir);
+            throw new GuardException('guardcompress: out_path hilang', $report);
+        }
         return new GuardResult($report['out_path'], $report);
+    }
+
+    /** Hapus folder tmp output setelah file dipindah ke storage permanen. */
+    public static function cleanup(string $dir): void
+    {
+        self::rmDir($dir);
+    }
+
+    private static function rmDir(string $dir): void    {
+        if (!is_dir($dir)) return;
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($it as $f) { $f->isDir() ? rmdir($f->getPathname()) : unlink($f->getPathname()); }
+        rmdir($dir);
     }
 
     public static function resolveBinary(): string

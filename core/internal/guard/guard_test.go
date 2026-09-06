@@ -72,3 +72,34 @@ func TestRejectTooLarge(t *testing.T) {
 		t.Fatal("harusnya BLOCKED karena over max_mb")
 	}
 }
+
+func TestBinaryCoincidenceAllowed(t *testing.T) {
+	// Regression: byte "<%" yang muncul kebetulan di data biner (non-teks)
+	// JANGAN diblokir. Konteks harus >70% printable agar dihitung webshell.
+	png := []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}
+	noise := make([]byte, 300)
+	for i := range noise {
+		noise[i] = byte(i * 7 % 256) // acak non-printable
+	}
+	blob := append(png, noise...)
+	blob = append(blob, '<', '%')
+	blob = append(blob, noise...)
+	p := writeTmp(t, "binary.png", blob)
+	r, _ := Scan(p, map[string]any{})
+	if !r.Allowed {
+		t.Fatalf("harusnya allowed (konteks biner), reason: %s", r.Reason)
+	}
+}
+
+func TestEicarAlwaysBlocked(t *testing.T) {
+	// EICAR diblokir bahkan di tengah data biner (tanpa konteks teks).
+	png := []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}
+	blob := append(png, 0x00, 0xFF, 0x01)
+	blob = append(blob, []byte(`X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`)...)
+	blob = append(blob, 0x00, 0xFE)
+	p := writeTmp(t, "eicar.png", blob)
+	r, _ := Scan(p, map[string]any{})
+	if r.Allowed {
+		t.Fatal("harusnya BLOCKED (EICAR)")
+	}
+}

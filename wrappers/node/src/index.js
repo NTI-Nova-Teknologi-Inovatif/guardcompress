@@ -31,8 +31,10 @@ function processFile(inPath, opts = {}) {
   try { report = JSON.parse((r.stdout || '').trim().split('\n').pop() || '{}'); }
   catch { report = { reason: r.stdout + r.stderr }; }
 
-  if (r.status === 2) { const e = new Error('blocked: ' + (report.reason || '')); e.report = report; e.code = 'BLOCKED'; throw e; }
-  if (r.status !== 0) { const e = new Error('guardcompress failed: ' + (report.reason || r.stderr)); e.report = report; throw e; }
+  const cleanup = () => { try { fs.rmSync(outDir, { recursive: true, force: true }); } catch {} };
+  if (r.status === 2) { cleanup(); const e = new Error('blocked: ' + (report.reason || '')); e.report = report; e.code = 'BLOCKED'; throw e; }
+  if (r.status !== 0) { cleanup(); const e = new Error('guardcompress failed: ' + (report.reason || r.stderr)); e.report = report; throw e; }
+  if (r.error) { cleanup(); const e = new Error('guardcompress timeout/crash: ' + r.error.message); e.report = report; throw e; }
   return { path: report.out_path, report };
 }
 

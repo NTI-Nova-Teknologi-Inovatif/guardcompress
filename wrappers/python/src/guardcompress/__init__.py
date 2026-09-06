@@ -1,5 +1,5 @@
 """Thin wrapper: subprocess -> guardcompress binary -> report.json"""
-import json, os, platform, subprocess, tempfile
+import json, os, platform, shutil, subprocess, tempfile
 from pathlib import Path
 
 class BlockedError(Exception):
@@ -28,13 +28,22 @@ def process(in_path: str, opts: dict | None = None) -> dict:
     b = _resolve_binary()
     out = tempfile.mkdtemp(prefix="gc-")
     cfg = json.dumps(opts or {})
-    r = subprocess.run([b, "check", "--in", in_path, "--out-dir", out,
-                        "--config", cfg, "--json"],
-                       capture_output=True, text=True, timeout=(opts or {}).get("timeoutSec", 120))
+    try:
+        r = subprocess.run([b, "check", "--in", in_path, "--out-dir", out,
+                            "--config", cfg, "--json"],
+                           capture_output=True, text=True, timeout=(opts or {}).get("timeoutSec", 120))
+    except Exception:
+        shutil.rmtree(out, ignore_errors=True)
+        raise
     line = (r.stdout or "").strip().splitlines()
-    report = json.loads(line[-1]) if line else {"reason": r.stderr}
+    try:
+        report = json.loads(line[-1]) if line else {"reason": r.stderr}
+    except json.JSONDecodeError:
+        report = {"reason": (r.stdout or "") + (r.stderr or "")}
     if r.returncode == 2:
+        shutil.rmtree(out, ignore_errors=True)  # file kotor: buang output
         raise BlockedError("blocked: " + str(report.get("reason")), report)
     if r.returncode != 0:
+        shutil.rmtree(out, ignore_errors=True)
         raise RuntimeError("guardcompress failed: " + str(report.get("reason", r.stderr)))
     return {"path": report.get("out_path"), "report": report}
