@@ -13,16 +13,28 @@ class GuardCompress
         if (!mkdir($outDir, 0700, true) && !is_dir($outDir)) {
             throw new \RuntimeException("cannot create tmp dir: $outDir");
         }
-        $config = escapeshellarg(json_encode($opts ?: new \stdClass()));
-        $cmd = escapeshellarg($bin)
-            . ' check --in ' . escapeshellarg($inPath)
-            . ' --out-dir ' . escapeshellarg($outDir)
-            . ' --config ' . $config
-            . ' --json 2>&1';
+        // AUDIT: proc_open array (tanpa shell) — escapeshellarg+exec rusak
+        // di Windows bila JSON berisi kutip (cmd.exe mengupasnya).
+        if (!function_exists('proc_open')) {
+            throw new \RuntimeException('proc_open() dibutuhkan GuardCompress');
+        }
+        $config = json_encode($opts ?: new \stdClass());
+        $proc = proc_open(
+            [$bin, 'check', '--in', $inPath, '--out-dir', $outDir, '--config', $config, '--json'],
+            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+            $pipes
+        );
+        if (!is_resource($proc)) {
+            self::rmDir($outDir);
+            throw new GuardException('gagal menjalankan guardcompress binary');
+        }
+        $stdout = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $code = proc_close($proc);
 
-        exec($cmd, $lines, $code);
         // Ambil baris JSON terakhir (abaikan log lain)
-        $json = trim(implode("\n", $lines));
+        $json = trim((string)$stdout);
         $last = substr($json, strrpos($json, "\n") === false ? 0 : strrpos($json, "\n") + 1);
         $report = json_decode($last, true) ?? ['reason' => $json];
 
@@ -47,7 +59,8 @@ class GuardCompress
         self::rmDir($dir);
     }
 
-    private static function rmDir(string $dir): void    {
+    private static function rmDir(string $dir): void
+    {
         if (!is_dir($dir)) return;
         $it = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),

@@ -12,6 +12,15 @@ $r = GuardCompress::process('C:/Users/allmi/AppData/Local/Temp/opencode/clean.pn
 echo "php-clean: {$r->report['status']}\n";
 if ($r->report['status'] !== 'clean') { $fails++; }
 
+// Regression: opts berisi kutip (array allow) harus lolos utuh ke core,
+// terutama di Windows (cmd.exe merusak escapeshellarg+exec).
+$r2 = GuardCompress::process('C:/Tools/GuardCompress/test/fixtures/clean.png', [
+    'max_mb' => 50,
+    'allow' => ['image/jpeg', 'image/png', 'image/webp'],
+]);
+echo "php-opts-quotes: {$r2->report['status']}\n";
+if ($r2->report['status'] !== 'clean') { $fails++; }
+
 try {
     GuardCompress::process('C:/Users/allmi/AppData/Local/Temp/opencode/eicar.txt', []);
     echo "php-blocked: FAIL (tidak diblokir)\n";
