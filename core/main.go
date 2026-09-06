@@ -2,7 +2,7 @@
 // Contract (STABLE):
 //   guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]
 //   exit 0 = clean, exit 2 = blocked, exit 1 = error
-//   stdout = report.json
+//   stdout (check --json) = report.json di baris terakhir
 package main
 
 import (
@@ -17,34 +17,60 @@ import (
 	"github.com/guardcompress/guardcompress/core/internal/guard"
 )
 
+var Version = "v0.1.0"
+
 type Report struct {
-	Status   string         `json:"status"` // clean | blocked
-	InPath   string         `json:"in_path"`
-	OutPath  string         `json:"out_path,omitempty"`
-	Detected string         `json:"detected_mime"`
-	OrigBytes int64         `json:"orig_bytes"`
-	NewBytes  int64         `json:"new_bytes,omitempty"`
-	TookMs   int64          `json:"took_ms"`
-	Reason   string         `json:"reason,omitempty"`
-	Details  map[string]any `json:"details,omitempty"`
+	Status    string         `json:"status"` // clean | blocked | error
+	InPath    string         `json:"in_path"`
+	OutPath   string         `json:"out_path,omitempty"`
+	Detected  string         `json:"detected_mime"`
+	OrigBytes int64          `json:"orig_bytes"`
+	NewBytes  int64          `json:"new_bytes,omitempty"`
+	TookMs    int64          `json:"took_ms"`
+	Reason    string         `json:"reason,omitempty"`
+	Details   map[string]any `json:"details,omitempty"`
 }
 
 func main() {
-	if len(os.Args) < 2 || os.Args[1] != "check" {
-		fmt.Fprintln(os.Stderr, "usage: guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]")
+	if len(os.Args) < 2 {
+		usage()
 		os.Exit(1)
 	}
+	switch os.Args[1] {
+	case "check":
+		runCheck()
+	case "doctor":
+		runDoctor()
+	case "init":
+		runInit()
+	case "version", "--version", "-v":
+		fmt.Println("guardcompress " + Version)
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command %q\n", os.Args[1])
+		usage()
+		os.Exit(1)
+	}
+}
 
+func usage() {
+	fmt.Fprintln(os.Stderr, `guardcompress `+Version+`
+usage:
+  guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]
+  guardcompress doctor                      # cek ffmpeg + env, output JSON
+  guardcompress init --lang php|node|python|go  # cetak contoh integrasi
+  guardcompress version`)
+}
+
+func runCheck() {
 	fs := flag.NewFlagSet("check", flag.ExitOnError)
 	inPath := fs.String("in", "", "input file path")
 	outDir := fs.String("out-dir", "", "output directory")
-	configStr := fs.String("config", "{}", "JSON config: {\"max_mb\":500,\"allow\":[],\"video_crf\":28}")
-	_ = fs.Bool("json", false, "output report as JSON to stdout")
+	configStr := fs.String("config", "{}", "JSON config")
+	_ = fs.Bool("json", false, "output report as JSON")
 	_ = fs.Parse(os.Args[2:])
 
 	start := time.Now()
 	report := Report{InPath: *inPath, Details: map[string]any{}}
-
 	fail := func(msg string, code int) {
 		report.Status = "blocked"
 		if code == 1 {
@@ -68,7 +94,6 @@ func main() {
 		fail("cannot create out-dir: "+err.Error(), 1)
 	}
 
-	// ---- GUARD PHASE ----
 	gres, err := guard.Scan(*inPath, cfg)
 	if err != nil {
 		fail("guard error: "+err.Error(), 1)
@@ -80,7 +105,6 @@ func main() {
 		fail("blocked: "+gres.Reason, 2)
 	}
 
-	// ---- COMPRESS PHASE ----
 	outPath := filepath.Join(*outDir, "output"+gres.SafeExt())
 	cres, err := compress.Run(*inPath, outPath, gres.Mime, cfg)
 	if err != nil {
@@ -94,4 +118,58 @@ func main() {
 	report.TookMs = time.Since(start).Milliseconds()
 	b, _ := json.Marshal(report)
 	fmt.Println(string(b))
+}
+
+func runDoctor() {
+	ff := compress.FindFFmpeg()
+	info := map[string]any{
+		"version": Version,
+		"ffmpeg":  ff,
+		"ffmpeg_found": ff != "",
+		"cache_dir": compress.CacheDir(),
+		"os":        filepath.Base(os.TempDir()),
+	}
+	if ff == "" {
+		info["hint"] = "ffmpeg tidak ketemu, mode guard-only (copy). Set GUARDCOMPRESS_FFMPEG ke path ffmpeg static."
+	}
+	b, _ := json.MarshalIndent(info, "", "  ")
+	fmt.Println(string(b))
+}
+
+func runInit() {
+	fs := flag.NewFlagSet("init", flag.ExitOnError)
+	lang := fs.String("lang", "php", "php|node|python|go")
+	_ = fs.Parse(os.Args[2:])
+	fmt.Println(snippetFor(*lang))
+}
+
+func snippetFor(lang string) string {
+	switch lang {
+	case "node":
+		return `// Node/Express + Multer
+const gc = require('guardcompress');
+const r = gc.process(req.file.path, { max_mb: 500, video_crf: 28 });
+// simpan r.path ke S3, try/catch BLOCKED -> 422`
+	case "python":
+		return `# Django/Flask
+from guardcompress import process, BlockedError
+try:
+    r = process(tmp_path, {"max_mb": 500, "video_crf": 28})
+except BlockedError as e:
+    return 422, str(e)`
+	case "go":
+		return `// Go net/http
+import gc "github.com/guardcompress/guardcompress/wrappers/go"
+res, err := gc.Process(tmpPath, map[string]any{"max_mb": 500})`
+	default:
+		return `<?php
+// Laravel: tempel ke UploadController@store
+use GuardCompress\GuardCompress;
+try {
+    $r = GuardCompress::process($request->file('video')->getRealPath(), ['max_mb'=>500,'video_crf'=>28]);
+    $path = Storage::putFile('media', new File($r->path));
+} catch (\GuardCompress\InfectedFileException $e) {
+    return response()->json(['blocked'=>$e->getMessage()], 422);
+}`
+	}
 }

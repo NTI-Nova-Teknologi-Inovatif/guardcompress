@@ -19,7 +19,7 @@ type Result struct {
 	Details  map[string]any
 }
 
-func findFFmpeg() string {
+func FindFFmpeg() string {
 	if p := os.Getenv("GUARDCOMPRESS_FFMPEG"); p != "" {
 		if _, err := os.Stat(p); err == nil {
 			return p
@@ -39,7 +39,7 @@ func findFFmpeg() string {
 
 func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	res := Result{Details: map[string]any{}}
-	ff := findFFmpeg()
+	ff := FindFFmpeg()
 	if ff == "" {
 		// Guard-only fallback: copy tanpa kompresi
 		if err := copyFile(inPath, outPath); err != nil {
@@ -117,4 +117,12 @@ func tail(s string, n int) string {
 		return s
 	}
 	return s[len(s)-n:]
+}
+
+// CacheDir: lokasi lazy-download ffmpeg static (~/.cache/guardcompress).
+func CacheDir() string {
+	if h, err := os.UserHomeDir(); err == nil && h != "" {
+		return filepath.Join(h, ".cache", "guardcompress")
+	}
+	return filepath.Join(os.TempDir(), "guardcompress-cache")
 }

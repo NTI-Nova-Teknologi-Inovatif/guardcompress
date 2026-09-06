@@ -19,7 +19,7 @@ function resolveBinary() {
   throw new Error(`guardcompress binary not found (${name}). Run node scripts/postinstall.js`);
 }
 
-function process(inPath, opts = {}) {
+function processFile(inPath, opts = {}) {
   const bin = resolveBinary();
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gc-'));
   const r = spawnSync(bin, [
@@ -36,4 +36,4 @@ function process(inPath, opts = {}) {
   return { path: report.out_path, report };
 }
 
-module.exports = { process, resolveBinary };
+module.exports = { process: processFile, processFile, resolveBinary };
