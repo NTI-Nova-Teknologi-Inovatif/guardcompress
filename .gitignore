@@ -1,0 +1,38 @@
+# Binaries
+/core/guardcompress
+/core/guardcompress.exe
+/core/bin/
+dist/
+*.test
+*.out
+
+# Go
+__debug_bin*
+
+# FFmpeg cache (downloaded at runtime, not committed)
+.ffmpeg-cache/
+~/.cache/guardcompress/
+
+# Temp
+/tmp/gc-*/
+*.tmp
+*.log
+
+# Wrappers build
+wrappers/node/node_modules/
+wrappers/node/dist/
+wrappers/python/dist/
+wrappers/python/__pycache__/
+wrappers/python/*.egg-info/
+wrappers/php/vendor/
+__pycache__/
+*.pyc
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Env
+.env

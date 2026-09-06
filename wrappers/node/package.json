@@ -1,0 +1,10 @@
+{
+  "name": "guardcompress",
+  "version": "0.1.0",
+  "description": "GuardCompress Node wrapper - thin wrapper over Go single-binary core",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  }
+}

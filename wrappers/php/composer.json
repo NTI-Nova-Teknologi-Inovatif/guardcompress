@@ -1,0 +1,12 @@
+{
+    "name": "guardcompress/php",
+    "description": "GuardCompress PHP wrapper (Laravel/WordPress) - thin wrapper over Go single-binary core.",
+    "type": "library",
+    "license": "MIT",
+    "require": { "php": ">=8.0" },
+    "autoload": { "psr-4": { "GuardCompress\\": "src/" } },
+    "scripts": {
+        "post-install-cmd": "php bin/install-binary.php",
+        "post-update-cmd": "php bin/install-binary.php"
+    }
+}

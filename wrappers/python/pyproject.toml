@@ -1,0 +1,9 @@
+[project]
+name = "guardcompress"
+version = "0.1.0"
+description = "GuardCompress Python wrapper - thin wrapper over Go single-binary core"
+readme = "README.md"
+requires-python = ">=3.9"
+
+[build-system]
+requires = ["setuptools"]
