@@ -2,11 +2,13 @@
 package guardcompress
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 type Result struct {
@@ -28,7 +30,24 @@ func Process(inPath string, opts map[string]any) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	cmd := exec.Command(bin, "check", "--in", inPath, "--out-dir", outDir, "--config", string(cfg), "--json")
+	// AUDIT: timeout wrapper (120s) harus > timeout ffmpeg core (100s)
+	// agar core yang selalu menuai ffmpeg, bukan wrapper.
+	timeout := 120 * time.Second
+	if v, ok := opts["timeoutSec"]; ok {
+		switch n := v.(type) {
+		case int:
+			if n > 0 {
+				timeout = time.Duration(n) * time.Second
+			}
+		case float64:
+			if n > 0 {
+				timeout = time.Duration(n * float64(time.Second))
+			}
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin, "check", "--in", inPath, "--out-dir", outDir, "--config", string(cfg), "--json")
 	out, err := cmd.Output()
 	var report map[string]any
 	_ = json.Unmarshal(lastLine(out), &report)

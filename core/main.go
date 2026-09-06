@@ -1,8 +1,9 @@
 // Command guardcompress: single-binary CLI Core Engine.
 // Contract (STABLE):
-//   guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]
-//   exit 0 = clean, exit 2 = blocked, exit 1 = error
-//   stdout (check --json) = report.json di baris terakhir
+//
+//	guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]
+//	exit 0 = clean, exit 2 = blocked, exit 1 = error
+//	stdout (check --json) = report.json di baris terakhir
 package main
 
 import (
@@ -103,6 +104,12 @@ func runCheck() {
 	report.Details["guard"] = gres.Details
 	if !gres.Allowed {
 		fail("blocked: "+gres.Reason, 2)
+	}
+
+	// AUDIT TOCTOU: file bisa diganti penyerang di antara scan & kompres
+	// (sharing tmp). Batalkan bila ukuran berubah setelah scan.
+	if fi2, err := os.Stat(*inPath); err != nil || fi2.Size() != gres.Size {
+		fail("input changed after scan (possible race), abort", 1)
 	}
 
 	outPath := filepath.Join(*outDir, "output"+gres.SafeExt())

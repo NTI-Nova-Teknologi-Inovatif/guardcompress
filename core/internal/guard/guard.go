@@ -33,9 +33,12 @@ var defaultAllow = []string{
 }
 
 // Token berbahaya: webshell / script polyglot yang sering ditempel di media.
+// Varian UTF-16-LE/BE dari "<?php" ikut dipindai (webshell unicode).
 var suspiciousTokens = [][]byte{
 	[]byte("<?php"), []byte("<?="), []byte("<%"), []byte("<script"),
 	[]byte("eval("), []byte("base64_decode"), []byte("c99shell"), []byte("r57shell"),
+	{'<', 0, '?', 0, 'p', 0, 'h', 0, 'p', 0}, // "<?php" UTF-16LE
+	{0, '<', 0, '?', 0, 'p', 0, 'h', 0, 'p'}, // "<?php" UTF-16BE
 	[]byte("X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR"),
 }
 
@@ -49,6 +52,15 @@ func (r Result) SafeExt() string {
 
 func Scan(path string, cfg map[string]any) (Result, error) {
 	res := Result{Details: map[string]any{}}
+	// AUDIT: tolak symlink agar pemindaian tidak bisa diarahkan baca file
+	// sembarang milik server (defense-in-depth; path normalnya tmp acak).
+	if li, err := os.Lstat(path); err != nil {
+		return res, err
+	} else if li.Mode()&os.ModeSymlink != 0 {
+		res.Reason = "symlink not allowed"
+		res.Details["filename"] = filepath.Base(path)
+		return res, nil
+	}
 	fi, err := os.Stat(path)
 	if err != nil {
 		return res, err
@@ -98,40 +110,28 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 	res.Mime = mime
 	res.Details["sniffed"] = mime
 
-	// Peringatan double-extension: evil.mp4.php
+	// Peringatan double-extension: evil.mp4.php (nama file tmp normalnya acak
+	// tanpa extension, tapi tetap tolak pola executable sebagai jaring kedua).
 	lower := strings.ToLower(filepath.Base(path))
-	if strings.Contains(lower, ".php") || strings.Contains(lower, ".phtml") ||
-		strings.Contains(lower, ".asp") || strings.Contains(lower, ".jsp") {
-		res.Reason = "suspicious filename (executable extension): " + lower
-		res.Details["filename"] = lower
-		return res, nil
+	for _, bad := range []string{".php", ".phtml", ".phar", ".asp", ".aspx",
+		".jsp", ".jspx", ".cgi", ".pl", ".py", ".sh", ".exe", ".com", ".bat",
+		".ps1", ".htaccess"} {
+		if strings.Contains(lower, bad) {
+			res.Reason = "suspicious filename (executable extension): " + lower
+			res.Details["filename"] = lower
+			return res, nil
+		}
 	}
 
 	// Heuristic scan DULU (sebelum allowlist) agar alasan blokir presisi.
-	// Cap 32MB untuk hemat memory; file besar discan per head+tail.
-	const capBytes = 32 << 20
-	var buf []byte
-	if res.Size <= capBytes {
-		buf = make([]byte, res.Size)
-		_, _ = f.ReadAt(buf, 0)
-	} else {
-		buf = make([]byte, capBytes)
-		_, _ = f.ReadAt(buf[:16<<20], 0) // 16MB head
-		tail := make([]byte, 16<<20)
-		_, _ = f.ReadAt(tail, res.Size-int64(len(tail)))
-		copy(buf[16<<20:], tail)
-		res.Details["scan"] = "head+tail 32MB"
-	}
-	for _, tok := range suspiciousTokens {
-		if foundAt(buf, tok) {
-			shown := string(tok)
-			if len(shown) > 24 {
-				shown = shown[:24] + "..."
-			}
-			res.Reason = "suspicious token detected: " + shown
-			res.Details["token"] = shown
-			return res, nil
+	// AUDIT: streaming per-chunk 1MB + overlap (bukan head+tail) agar payload
+	// yang disembunyikan di TENGAH file besar tetap ketemu, memory konstan.
+	if reason, token := streamScan(f, res.Size); reason != "" {
+		res.Reason = reason
+		if token != "" {
+			res.Details["token"] = token
 		}
+		return res, nil
 	}
 
 	allow := defaultAllow
@@ -168,12 +168,58 @@ func min(a, b int) int {
 	return b
 }
 
-// foundAt: cari token di buf, tapi hanya hitung bila konteks sekitarnya
-// terlihat seperti teks (kode script itu teks). Data biner video terkompresi
-// bisa mengandung "<%" / "eval(" secara kebetulan di antara byte acak.
-// EICAR (68 char) cukup unik -> cocok langsung tanpa cek konteks.
+// streamScan: pindai seluruh file per-chunk 1MB dengan overlap 4KB.
+// Overlap besar agar laju teks yang terpotong batas chunk tetap utuh
+// terlihat oleh inTextRun dari kedua sisi.
+func streamScan(f *os.File, size int64) (string, string) {
+	const chunkSize = 1 << 20
+	const overlap = 4096
+	var prev []byte
+	for offset := int64(0); offset < size; {
+		toRead := int64(chunkSize)
+		if offset+toRead > size {
+			toRead = size - offset
+		}
+		chunk := make([]byte, toRead)
+		n, err := f.ReadAt(chunk, offset)
+		if n > 0 {
+			chunk = chunk[:n]
+		} else {
+			break
+		}
+		window := make([]byte, 0, len(prev)+len(chunk))
+		window = append(window, prev...)
+		window = append(window, chunk...)
+		for _, tok := range suspiciousTokens {
+			if foundAt(window, tok) {
+				shown := string(tok)
+				if len(shown) > 24 {
+					shown = shown[:24] + "..."
+				}
+				return "suspicious token detected: " + shown, shown
+			}
+		}
+		if len(window) > overlap {
+			prev = append(prev[:0], window[len(window)-overlap:]...)
+		} else {
+			prev = append(prev[:0], window...)
+		}
+		offset += int64(n)
+		if err != nil {
+			break
+		}
+	}
+	return "", ""
+}
+
+// foundAt: cari token di buf. Token pendek ("<%", "eval(") hanya dihitung
+// bila duduk di dalam LAJU TEKS printable yang panjang (>=24): kode script
+// itu teks bersambung, sedangkan kebetulan biner tidak pernah membentuk
+// laju printable 24+ (peluang ~0.38^24). Padding biner di satu sisi tidak
+// menolong penyerang karena laju tetap memanjang ke sisi kode.
+// Token panjang & unik (EICAR, UTF-16) cocok langsung tanpa cek konteks.
 func foundAt(buf, tok []byte) bool {
-	if bytes.Equal(tok, []byte("X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR")) {
+	if isDirectToken(tok) {
 		return bytes.Contains(buf, tok)
 	}
 	start := 0
@@ -183,7 +229,7 @@ func foundAt(buf, tok []byte) bool {
 			return false
 		}
 		at := start + i
-		if isTextWindow(buf, at, len(tok)) {
+		if inTextRun(buf, at, len(tok)) {
 			return true
 		}
 		start = at + 1
@@ -193,26 +239,28 @@ func foundAt(buf, tok []byte) bool {
 	}
 }
 
-// isTextWindow: >70% byte di jendela ±64 sekitar temuan harus printable ASCII.
-func isTextWindow(buf []byte, at, tokLen int) bool {
-	const W = 64
-	s := at - W
-	if s < 0 {
-		s = 0
+func isDirectToken(tok []byte) bool {
+	if bytes.HasPrefix(tok, []byte("X5O!P%@AP")) {
+		return true
 	}
-	e := at + tokLen + W
-	if e > len(buf) {
-		e = len(buf)
+	// UTF-16 variants mengandung NUL -> tak pernah lolos inTextRun, direct saja.
+	return bytes.IndexByte(tok, 0) >= 0
+}
+
+// inTextRun: panjang laju printable maksimal yang memuat token >= 24?
+func inTextRun(buf []byte, at, tokLen int) bool {
+	const minRun = 24
+	l := at
+	for l > 0 && isPrintable(buf[l-1]) {
+		l--
 	}
-	win := buf[s:e]
-	if len(win) == 0 {
-		return false
+	r := at + tokLen
+	for r < len(buf) && isPrintable(buf[r]) {
+		r++
 	}
-	printable := 0
-	for _, b := range win {
-		if b == 9 || b == 10 || b == 13 || (b >= 32 && b < 127) {
-			printable++
-		}
-	}
-	return float64(printable)/float64(len(win)) > 0.7
+	return r-l >= minRun
+}
+
+func isPrintable(b byte) bool {
+	return b == 9 || b == 10 || b == 13 || (b >= 32 && b < 127)
 }

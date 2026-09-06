@@ -17,7 +17,7 @@ class CompressUpload implements ShouldQueue
     public function handle(): void
     {
         try {
-            $r = GuardCompress::process($this->tmpPath, ['max_mb' => 500, 'video_crf' => 28]);
+            $r = GuardCompress::process($this->tmpPath, ['max_mb' => 500, 'video_crf' => 28, 'timeoutSec' => 600]);
             $stored = Storage::disk('s3')->putFile('media', new \File($r->path));
             // TODO: simpan $stored + $r->report ke DB, notify user
         } catch (\GuardCompress\InfectedFileException $e) {

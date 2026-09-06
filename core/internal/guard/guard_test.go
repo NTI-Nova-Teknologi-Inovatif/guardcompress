@@ -103,3 +103,39 @@ func TestEicarAlwaysBlocked(t *testing.T) {
 		t.Fatal("harusnya BLOCKED (EICAR)")
 	}
 }
+
+func TestSymlinkRejected(t *testing.T) {
+	target := writeTmp(t, "real.png", []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0})
+	link := filepath.Join(t.TempDir(), "link.png")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skip("symlink tak didukung di sini: " + err.Error())
+	}
+	r, err := Scan(link, map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Allowed {
+		t.Fatal("harusnya BLOCKED (symlink)")
+	}
+}
+
+func TestPayloadInMiddleOfLargeFile(t *testing.T) {
+	// Regression blind-spot: payload di tengah file 40MB HARUS ketemu
+	// (streaming scan, bukan head+tail).
+	const size = 40 << 20
+	blob := make([]byte, size)
+	for i := range blob {
+		blob[i] = byte(i * 13 % 251)
+	}
+	copy(blob[:8], []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A})
+	payload := []byte("......<?php system($_GET['x']); ?>......")
+	copy(blob[20<<20:], payload)
+	p := writeTmp(t, "big.png", blob)
+	r, err := Scan(p, map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Allowed {
+		t.Fatal("harusnya BLOCKED (payload di tengah file besar lolos!)")
+	}
+}

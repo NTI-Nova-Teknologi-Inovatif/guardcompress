@@ -3,15 +3,18 @@
 //  1. env GUARDCOMPRESS_FFMPEG (di-set wrapper, hasil lazy-download + SHA verify)
 //  2. ./ffmpeg(.exe) di sebelah binary core
 //  3. ffmpeg di PATH (fallback kalau admin memang sudah install)
+//
 // Kalau ffmpeg tidak ketemu: fallback copy file (guard-only mode) agar tidak gagal total.
 package compress
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 type Result struct {
@@ -101,7 +104,9 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		res.Details["ffmpeg"] = ff
 		return res, nil
 	}
-	cmd := exec.Command(ff, args...)
+	ctx, cancel := ctxTimeout(cfg)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, ff, args...)
 	out, err := cmd.CombinedOutput()
 	res.Details["ffmpeg"] = ff
 	res.Details["ffmpeg_log_tail"] = tail(string(out), 2000)
@@ -111,6 +116,11 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	fi, err := os.Stat(outPath)
 	if err != nil {
 		return res, err
+	}
+	// AUDIT: output 0 byte = hasil korup, jangan pernah dianggap sukses.
+	if fi.Size() == 0 {
+		os.Remove(outPath)
+		return res, fmt.Errorf("ffmpeg produced empty output")
 	}
 	res.NewBytes = fi.Size()
 	res.Details["mode"] = "ffmpeg"
@@ -137,6 +147,28 @@ func tail(s string, n int) string {
 		return s
 	}
 	return s[len(s)-n:]
+}
+
+// ctxTimeout: batas waktu ffmpeg agar file jahat/korup yang bikin hang
+// tidak menggantung worker selamanya. Default 100s (harus < timeout wrapper
+// 120s agar core yang selalu menuai ffmpeg, bukan wrapper).
+// Override via cfg "timeout_sec" / "timeoutSec" (file besar + queue job).
+func ctxTimeout(cfg map[string]any) (context.Context, context.CancelFunc) {
+	secs := 100.0
+	for _, k := range []string{"timeout_sec", "timeoutSec"} {
+		switch v := cfg[k].(type) {
+		case float64:
+			if v > 0 {
+				secs = v
+			}
+		case int:
+			if v > 0 {
+				secs = float64(v)
+			}
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
+	return ctx, cancel
 }
 
 // CacheDir: lokasi lazy-download ffmpeg static (~/.cache/guardcompress).

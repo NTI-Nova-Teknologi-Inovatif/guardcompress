@@ -8,7 +8,7 @@ app = Celery("media", broker="redis://localhost:6379/0")
 @app.task(bind=True, max_retries=3)
 def compress_upload(self, tmp_path: str, user_id: int):
     try:
-        r = process(tmp_path, {"max_mb": 500, "video_crf": 28})
+        r = process(tmp_path, {"max_mb": 500, "video_crf": 28, "timeoutSec": 600})
         # TODO: upload r["path"] ke S3, simpan r["report"] ke DB
         return {"stored": r["path"]}
     except BlockedError as e:

@@ -9,7 +9,8 @@ class GuardCompress
     {
         $bin = self::resolveBinary();
         $outDir = sys_get_temp_dir() . '/gc-' . uniqid();
-        if (!mkdir($outDir, 0777, true) && !is_dir($outDir)) {
+        // AUDIT: 0700 (bukan 0777) agar user lain di shared hosting tak bisa intip file.
+        if (!mkdir($outDir, 0700, true) && !is_dir($outDir)) {
             throw new \RuntimeException("cannot create tmp dir: $outDir");
         }
         $config = escapeshellarg(json_encode($opts ?: new \stdClass()));
@@ -65,8 +66,10 @@ class GuardCompress
         $arch = str_contains($arch, 'arm') || str_contains($arch, 'aarch64') ? 'arm64' : 'amd64';
         $ext = $os === 'windows' ? '.exe' : '';
         $name = "guardcompress-{$os}-{$arch}{$ext}";
+        // AUDIT: HOME bisa kosong di PHP-FPM; coba getenv + USERPROFILE juga.
+        $home = $_SERVER['HOME'] ?? getenv('HOME') ?? getenv('USERPROFILE') ?: sys_get_temp_dir();
         foreach([
-            ($_SERVER['HOME'] ?? sys_get_temp_dir()) . "/.cache/guardcompress/$name",
+            "$home/.cache/guardcompress/$name",
             __DIR__ . "/../../core/bin/$name",
             __DIR__ . "/../../bin/$name",
         ] as $p) { if (is_file($p)) return $p; }

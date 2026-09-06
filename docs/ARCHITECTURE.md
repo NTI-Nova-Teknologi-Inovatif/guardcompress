@@ -31,5 +31,9 @@ Upload tmp -> wrapper proses():
 ## 5. Keamanan
 - Jangan percaya extension; pakai magic numbers.
 - `escapeshellarg` / arg array (tanpa shell) di semua wrapper.
-- Timeout 120s default, kill FFmpeg yang hang.
+- Timeout berlapis: ffmpeg core 100s < wrapper 120s (core selalu yang menuai ffmpeg).
+  File besar naikkan via `timeoutSec` + pindah ke queue (lihat `examples/`).
 - Hapus tmp `in/out` setelah selesai; jangan log isi file.
+- AUDIT: report JSON berisi path server (`in_path`, `ffmpeg`) — jangan kirim
+  mentah ke browser, kirim ringkasannya saja (`stored_at`, ukuran).
+- AUDIT: symlink input ditolak; ukuran input dicek ulang setelah scan (TOCTOU).
