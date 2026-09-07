@@ -35,6 +35,9 @@ function processFile(inPath, opts = {}) {
   if (r.status === 2) { cleanup(); const e = new Error('blocked: ' + (report.reason || '')); e.report = report; e.code = 'BLOCKED'; throw e; }
   if (r.status !== 0) { cleanup(); const e = new Error('guardcompress failed: ' + (report.reason || r.stderr)); e.report = report; throw e; }
   if (r.error) { cleanup(); const e = new Error('guardcompress timeout/crash: ' + r.error.message); e.report = report; throw e; }
+  // Gagal cepat di batas: jangan kembalikan path undefined yang meledak
+  // belakangan di kode app dengan pesan membingungkan.
+  if (!report.out_path) { cleanup(); const e = new Error('guardcompress: out_path hilang dari report'); e.report = report; throw e; }
   return { path: report.out_path, report };
 }
 

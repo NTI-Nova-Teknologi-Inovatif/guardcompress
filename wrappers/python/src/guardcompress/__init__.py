@@ -46,4 +46,8 @@ def process(in_path: str, opts: dict | None = None) -> dict:
     if r.returncode != 0:
         shutil.rmtree(out, ignore_errors=True)
         raise RuntimeError("guardcompress failed: " + str(report.get("reason", r.stderr)))
+    # Gagal cepat di batas: jangan kembalikan path None yang meledak belakangan.
+    if not report.get("out_path"):
+        shutil.rmtree(out, ignore_errors=True)
+        raise RuntimeError("guardcompress: out_path hilang dari report")
     return {"path": report.get("out_path"), "report": report}

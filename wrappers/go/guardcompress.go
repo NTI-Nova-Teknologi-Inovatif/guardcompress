@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 )
 
@@ -59,8 +58,10 @@ func Process(inPath string, opts map[string]any) (Result, error) {
 		return Result{}, fmt.Errorf("guardcompress failed: %v (%s)", err, string(out))
 	}
 	p, _ := report["out_path"].(string)
+	// Gagal cepat di batas: fallback nama lama dihapus, error eksplisit.
 	if p == "" {
-		p = filepath.Join(outDir, "output")
+		os.RemoveAll(outDir)
+		return Result{}, fmt.Errorf("guardcompress: out_path hilang dari report")
 	}
 	return Result{Path: p, Report: report}, nil
 }
