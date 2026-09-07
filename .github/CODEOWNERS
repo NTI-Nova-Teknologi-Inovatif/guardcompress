@@ -1,0 +1,8 @@
+* core: @guardcompress/maintainer
+* wrappers/node: @guardcompress/maintainer
+* wrappers/php: @guardcompress/maintainer
+* wrappers/python: @guardcompress/maintainer
+* wrappers/go: @guardcompress/maintainer
+* docs: @guardcompress/maintainer
+* web: @guardcompress/maintainer
+* .github: @guardcompress/maintainer

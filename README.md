@@ -28,6 +28,26 @@ docs/               # ARCHITECTURE, CONFIG, CONTRACT, FFMPEG
 examples/           # contoh queue Laravel / BullMQ / Celery
 ```
 
+## Repo (multi-repo, mono-sumber)
+
+| Repo | Isi | Publish |
+|---|---|---|
+| `guardcompress/guardcompress` | full monorepo | kode sumber |
+| `guardcompress/js` | `wrappers/node/` | npm `guardcompress` |
+| `guardcompress/php` | `wrappers/php/` | Packagist `guardcompress/php` |
+| `guardcompress/python` | `wrappers/python/` | PyPI `guardcompress` |
+| `guardcompress/go` | `wrappers/go/` | `go get .../wrappers/go` |
+
+Wrapper dibagi lewat subtree split otomatis (lihat `.github/workflows/subtree.yml`).
+
+## Lisensi & hukum
+
+- Kode: **MIT** (`LICENSE`).
+- FFmpeg binary: redistribusi wajib LGPL + atribusi + `COPYING.LGPLv2.1` (lihat `THIRD-PARTY-NOTICES.md`, `docs/FFMPEG.md`).
+- ClamAV: tidak dibundel, ikut lisensi instalasi user.
+- Nol dependensi npm/composer/pip pihak ketiga — semua stdlib.
+- Panduan rilis & kebijakan: `docs/RELEASE.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`.
+
 ## Coba-coba (dev)
 
 ```powershell
