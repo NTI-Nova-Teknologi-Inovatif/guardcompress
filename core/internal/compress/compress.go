@@ -217,8 +217,12 @@ func ctxTimeout(cfg map[string]any) (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-// CacheDir: lokasi lazy-download ffmpeg static (~/.cache/guardcompress).
+// CacheDir: lokasi lazy-download ffmpeg static + slot admission.
+// Bisa dipindah via env GUARDCOMPRESS_CACHE (container/serverless/home read-only).
 func CacheDir() string {
+	if c := os.Getenv("GUARDCOMPRESS_CACHE"); c != "" {
+		return c
+	}
 	if h, err := os.UserHomeDir(); err == nil && h != "" {
 		return filepath.Join(h, ".cache", "guardcompress")
 	}
