@@ -10,6 +10,7 @@ new Worker('uploads', async (job) => {
   try {
     const r = gc.process(tmpPath, { max_mb: 500, video_crf: 28, timeoutSec: 600 });
     // TODO: upload r.path ke S3, simpan report ke DB
+    gc.cleanup(require('path').dirname(r.path)); // hapus tmp output (anti penuh/bocor)
     return { stored: r.path, saved: r.report.orig_bytes - r.report.new_bytes };
   } catch (e) {
     if (e.code === 'BLOCKED') return { blocked: String(e.message) }; // jangan retry

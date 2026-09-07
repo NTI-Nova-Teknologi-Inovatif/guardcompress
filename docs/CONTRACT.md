@@ -40,6 +40,18 @@ Pengecualian satu-satunya yang BERSUARA: binary core tidak ketemu
 (`GUARDCOMPRESS_BIN` / installer) — ini fail-closed yang disengaja agar
 aplikasi tidak jalan tanpa perlindungan secara diam-diam.
 
+## 5. Isolasi output antar-user (file tak nyasar)
+
+- Tiap panggilan dapat folder tmp **unik acak** (`mkdtemp` / `random_bytes`),
+  mode **0700** — user/OS lain tak bisa intip; nama file sama dari 2 user
+  tak pernah tabrakan (beda folder).
+- Setelah sukses, app WAJIB pindahkan file ke storage milik user lalu
+  panggil `cleanup`: PHP `GuardCompress::cleanup()`, Node `gc.cleanup()`,
+  Python `cleanup()`, Go `os.RemoveAll`. Gagal/ditolak dibersihkan otomatis.
+- Karantina bernama unik (`stem + timestamp nano`) — 2 file jahat nama
+  sama tak saling timpa.
+- Jangan pernah expose `report` mentah (berisi path server) ke browser.
+
 ## 4. Format yang didukung + config web
 
 Di web, developer cukup atur **extension familiar** — tools menerima semua

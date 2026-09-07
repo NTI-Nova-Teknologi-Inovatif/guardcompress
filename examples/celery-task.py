@@ -4,7 +4,7 @@ ANTI-DOWN: jalankan worker dengan concurrency terbatas, misal:
 (lihat `doctor` -> recommended_jobs; ffmpeg_threads default 2/job)
 """
 from celery import Celery
-from guardcompress import process, BlockedError
+from guardcompress import process, BlockedError, cleanup
 import os
 
 app = Celery("media", broker="redis://localhost:6379/0")
@@ -14,6 +14,7 @@ def compress_upload(self, tmp_path: str, user_id: int):
     try:
         r = process(tmp_path, {"max_mb": 500, "video_crf": 28, "timeoutSec": 600})
         # TODO: upload r["path"] ke S3, simpan r["report"] ke DB
+        cleanup(os.path.dirname(r["path"]))  # hapus tmp output (anti penuh/bocor)
         return {"stored": r["path"]}
     except BlockedError as e:
         return {"blocked": str(e)}  # jangan retry untuk file kotor

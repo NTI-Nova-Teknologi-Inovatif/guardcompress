@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/guardcompress/guardcompress/core/internal/compress"
@@ -230,7 +231,7 @@ func quarantine(inPath string, report *Report, cfg map[string]any) {
 	if err := os.MkdirAll(qd, 0o700); err != nil {
 		return
 	}
-	stem := guard.Sanitize(filepath.Base(inPath)) + "-q"
+	stem := guard.Sanitize(filepath.Base(inPath)) + "-q-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	dst := filepath.Join(qd, stem)
 	_ = copyFileLocal(inPath, dst)
 	b, _ := json.MarshalIndent(report, "", "  ")

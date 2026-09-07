@@ -109,6 +109,9 @@ async function batchAsync(items, opts = {}) {
 }
 
 module.exports = { process: processFile, processFile, resolveBinary,
+  // cleanup(outDir): hapus folder tmp output setelah file dipindah ke storage.
+  // Wajib dipanggil app setelah sukses (kecuali file sudah dipindah).
+  cleanup: (dir) => { try { fs.rmSync(dir, { recursive: true, force: true }); } catch {} },
   // Preset per jenis (1 sistem di belakangnya, opts user menang bila menimpa).
   image: (p, o = {}) => processFile(p, { allow_ext: ['jpg', 'jpeg', 'png', 'webp', 'gif'], ...o }),
   video: (p, o = {}) => processFile(p, { allow_ext: ['mp4', 'mov', 'webm', 'mkv', 'avi'], ...o }),

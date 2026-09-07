@@ -2,6 +2,11 @@
 import json, os, platform, shutil, subprocess, tempfile
 from pathlib import Path
 
+
+def cleanup(dir_path: str) -> None:
+    """Hapus folder tmp output setelah file dipindah ke storage permanen."""
+    shutil.rmtree(dir_path, ignore_errors=True)
+
 class BlockedError(Exception):
     def __init__(self, msg, report=None):
         super().__init__(msg)
