@@ -127,24 +127,9 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 	}
 	defer f.Close()
 
-	// Baca header lebih besar (8KB) agar deteksi ftyp MP4 akurat.
-	head := make([]byte, 8192)
-	n, _ := f.Read(head)
-	head = head[:n]
-	mime := http.DetectContentType(head[:min(n, 512)])
-
-	// Fix: MP4 kadang terdeteksi application/octet-stream oleh stdlib.
-	// Cek box 'ftyp' di offset 4.
-	if (mime == "application/octet-stream" || mime == "video/mp4") && len(head) > 12 {
-		if string(head[4:8]) == "ftyp" {
-			mime = "video/mp4"
-			res.Details["ftyp_fix"] = true
-		}
-	}
-	// Fix: WebM = EBML header 0x1A45DFA3
-	if mime == "application/octet-stream" && len(head) > 4 &&
-		head[0] == 0x1A && head[1] == 0x45 && head[2] == 0xDF && head[3] == 0xA3 {
-		mime = "video/webm"
+	mime, sniffDetails := SniffFile(path)
+	for k, v := range sniffDetails {
+		res.Details[k] = v
 	}
 	res.Mime = mime
 	res.Details["sniffed"] = mime
@@ -205,6 +190,48 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// SniffFile: deteksi MIME dari magic numbers (bukan extension).
+// Dipakai guard saat ingest DAN verifikasi ulang output (deteksi perubahan
+// format setelah kompres) serta perintah `verify` untuk audit simpanan.
+func SniffFile(path string) (string, map[string]any) {
+	details := map[string]any{}
+	f, err := os.Open(path)
+	if err != nil {
+		return "unknown", details
+	}
+	defer f.Close()
+	// Header 8KB agar deteksi ftyp MP4 akurat.
+	head := make([]byte, 8192)
+	n, _ := f.Read(head)
+	head = head[:n]
+	if len(head) == 0 {
+		return "unknown", details
+	}
+	mime := http.DetectContentType(head[:min(n, 512)])
+	// Fix: MP4 kadang terdeteksi application/octet-stream oleh stdlib.
+	if (mime == "application/octet-stream" || mime == "video/mp4") && len(head) > 12 {
+		if string(head[4:8]) == "ftyp" {
+			mime = "video/mp4"
+			details["ftyp_fix"] = true
+		}
+	}
+	// Fix: WebM = EBML header 0x1A45DFA3
+	if mime == "application/octet-stream" && len(head) > 4 &&
+		head[0] == 0x1A && head[1] == 0x45 && head[2] == 0xDF && head[3] == 0xA3 {
+		mime = "video/webm"
+	}
+	return mime, details
+}
+
+// TopType: keluarga format ("video", "audio", "image", ...) untuk memastikan
+// output tidak berubah keluarga dari input yang lolos.
+func TopType(mime string) string {
+	if i := strings.Index(mime, "/"); i > 0 {
+		return mime[:i]
+	}
+	return mime
 }
 
 // streamScan: pindai seluruh file per-chunk 1MB dengan overlap 4KB.

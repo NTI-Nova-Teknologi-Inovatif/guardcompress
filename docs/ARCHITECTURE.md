@@ -6,17 +6,22 @@
 - **Zero-install:** FFmpeg static lazy-download, YARA embedded, fallback guard-only.
 - **Kontrak stabil:** `check --in --out-dir --config --json`, exit `0/2/1`.
 
-## 2. Data Flow
+## 2. Data Flow (isolasi + deteksi berkelanjutan)
 ```
-Upload tmp -> wrapper proses():
-  exec guardcompress check
-    -> guard.Scan(): stat, max_mb, http.DetectContentType (512B), allowlist,
-                     heuristic token (EICAR/webshell), return Allowed+Reason
-    -> compress.Run(): findFFmpeg() [ENV > sidecar > PATH], spawn ffmpeg
-                       video: libx264 crf+preset+faststart, audio: mp3 96k
-                       fallback: copy bila ffmpeg absen
-  <- stdout report.json -> wrapper raise/return -> app simpan ke S3/DB
+Upload tmp (terisolasi, tak pernah langsung ke storage)
+  -> exec guardcompress check
+    -> guard.Scan() di file isolasi
+    -> DITOLAK? -> karantina opsional (quarantine_dir, default: buang) + exit 2
+    -> compress.Run() -> sniff ULANG output (keluarga format harus sama)
+    -> sidik sha256 output -> report.json + file bersih
+  -> app simpan file + sha256 ke DB/S3, hapus tmp
+... kapan saja setelahnya ...
+  guardcompress verify --in <simpanan> --expect-sha256 <sidik>
+    -> hash beda = file DIUBAH setelah lolos -> blocked
+    -> scan ulang rules terbaru -> pola baru ketahuan -> blocked
 ```
+Aturan: file yang lolos pun TERUS diawasi — setiap perubahan format/isi
+terdeteksi saat verify berkala (cron/queue).
 
 ## 2b. Struktur output (gampang dicek manual)
 ```

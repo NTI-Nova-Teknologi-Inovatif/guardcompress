@@ -7,9 +7,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -27,6 +30,7 @@ type Report struct {
 	Detected  string         `json:"detected_mime"`
 	OrigBytes int64          `json:"orig_bytes"`
 	NewBytes  int64          `json:"new_bytes,omitempty"`
+	SHA256    string         `json:"sha256,omitempty"` // sidik output (simpan di DB!)
 	TookMs    int64          `json:"took_ms"`
 	Reason    string         `json:"reason,omitempty"`
 	Details   map[string]any `json:"details,omitempty"`
@@ -40,6 +44,8 @@ func main() {
 	switch os.Args[1] {
 	case "check":
 		runCheck()
+	case "verify":
+		runVerify()
 	case "doctor":
 		runDoctor()
 	case "init":
@@ -57,9 +63,26 @@ func usage() {
 	fmt.Fprintln(os.Stderr, `guardcompress `+Version+`
 usage:
   guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]
+    # ingest: isolasi -> scan -> kompres -> verifikasi output + sidik sha256
+  guardcompress verify --in <path> [--config <json>] [--expect-sha256 <hex>] [--json]
+    # audit simpanan: deteksi perubahan file SETELAH lolos (cron/queue berkala)
   guardcompress doctor                      # cek ffmpeg + env, output JSON
   guardcompress init --lang php|node|python|go  # cetak contoh integrasi
   guardcompress version`)
+}
+
+// fileSHA256: sidik streaming (memory konstan walau file 500MB).
+func fileSHA256(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func runCheck() {
@@ -113,6 +136,9 @@ func runCheck() {
 	report.OrigBytes = gres.Size
 	report.Details["guard"] = gres.Details
 	if !gres.Allowed {
+		// Isi reason dulu agar salinan forensik di karantina lengkap.
+		report.Reason = "blocked: " + gres.Reason
+		quarantine(*inPath, &report, cfg)
 		fail("blocked: "+gres.Reason, 2)
 	}
 
@@ -137,11 +163,115 @@ func runCheck() {
 	report.NewBytes = cres.NewBytes
 	report.Details["compress"] = cres.Details
 
+	// DETEKSI PERUBAHAN FORMAT: sniff ulang HASIL kompres, keluarganya harus
+	// sama dengan input yang lolos (video->video dst). ffmpeg yang "berubah
+	// pikiran" / file yang ditukar di tengah jalan langsung digagalkan.
+	outMime, _ := guard.SniffFile(outPath)
+	report.Details["out_mime"] = outMime
+	if guard.TopType(outMime) != guard.TopType(gres.Mime) {
+		os.Remove(outPath)
+		fail("output format changed after compress (in "+gres.Mime+", out "+outMime+")", 1)
+	}
+	// Sidik output: simpan di DB; verify ulang kapan saja via `verify`.
+	if sum, err := fileSHA256(outPath); err != nil {
+		os.Remove(outPath)
+		fail("cannot fingerprint output: "+err.Error(), 1)
+	} else {
+		report.SHA256 = sum
+	}
+
 	report.Status = "clean"
 	report.TookMs = time.Since(start).Milliseconds()
 	saveReport()
 	b, _ := json.Marshal(report)
 	fmt.Println(string(b))
+}
+
+// quarantine: salin file yang DIBLOKIR ke dir forensik + laporannya.
+// Default MATI ("") = langsung buang (aman). Nyalakan hanya bila butuh audit:
+// --config {"quarantine_dir": "/var/lib/gc-quarantine"} (root-only, 0700!).
+func quarantine(inPath string, report *Report, cfg map[string]any) {
+	qd, _ := cfg["quarantine_dir"].(string)
+	if qd == "" {
+		return
+	}
+	if err := os.MkdirAll(qd, 0o700); err != nil {
+		return
+	}
+	stem := guard.Sanitize(filepath.Base(inPath)) + "-q"
+	dst := filepath.Join(qd, stem)
+	_ = copyFileLocal(inPath, dst)
+	b, _ := json.MarshalIndent(report, "", "  ")
+	_ = os.WriteFile(dst+".report.json", b, 0o600)
+}
+
+func copyFileLocal(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
+}
+
+// runVerify: audit file SIMPANAN kapan saja (cron/queue berkala).
+// Mendeteksi perubahan SETELAH lolos: hash beda dari sidik saat ingest,
+// atau pola jahat baru (rules query) yang dulu belum dikenal.
+func runVerify() {
+	fs := flag.NewFlagSet("verify", flag.ExitOnError)
+	inPath := fs.String("in", "", "stored file path to audit")
+	configStr := fs.String("config", "{}", "JSON config")
+	expectSHA := fs.String("expect-sha256", "", "fingerprint dari report ingest")
+	_ = fs.Bool("json", false, "output report as JSON")
+	_ = fs.Parse(os.Args[2:])
+
+	start := time.Now()
+	report := Report{InPath: *inPath, Details: map[string]any{}}
+	done := func(status, reason string, code int) {
+		report.Status = status
+		report.Reason = reason
+		report.TookMs = time.Since(start).Milliseconds()
+		b, _ := json.Marshal(report)
+		fmt.Println(string(b))
+		os.Exit(code)
+	}
+	if *inPath == "" {
+		done("error", "missing --in", 1)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal([]byte(*configStr), &cfg); err != nil {
+		done("error", "invalid --config JSON: "+err.Error(), 1)
+	}
+	// 1. Sidik sekarang vs sidik ingest -> ketahuan bila file diganti/diubah.
+	if *expectSHA != "" {
+		sum, err := fileSHA256(*inPath)
+		if err != nil {
+			done("error", "cannot read stored file: "+err.Error(), 1)
+		}
+		report.SHA256 = sum
+		if sum != *expectSHA {
+			report.Details["expected_sha256"] = *expectSHA
+			done("blocked", "stored file CHANGED since ingest (hash mismatch)", 2)
+		}
+	}
+	// 2. Scan ulang dengan rules saat ini (tangkap pola baru).
+	gres, err := guard.Scan(*inPath, cfg)
+	if err != nil {
+		done("error", "guard error: "+err.Error(), 1)
+	}
+	report.Detected = gres.Mime
+	report.OrigBytes = gres.Size
+	report.Details["guard"] = gres.Details
+	if !gres.Allowed {
+		done("blocked", "re-scan blocked: "+gres.Reason, 2)
+	}
+	done("clean", "", 0)
 }
 
 func runDoctor() {

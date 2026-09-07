@@ -174,3 +174,24 @@ func TestADSRejected(t *testing.T) {
 		t.Fatal("harusnya BLOCKED (ADS)")
 	}
 }
+
+func TestSniffFile(t *testing.T) {
+	png := writeTmp(t, "a.png", append([]byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}, 0, 0))
+	if mime, _ := SniffFile(png); mime != "image/png" {
+		t.Fatalf("dapat %q", mime)
+	}
+	mp4 := writeTmp(t, "a.mp4", append([]byte{0, 0, 0, 24, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'}, 0))
+	if mime, d := SniffFile(mp4); mime != "video/mp4" {
+		t.Fatalf("dapat %q (%v)", mime, d)
+	}
+	if mime, _ := SniffFile(t.TempDir() + "/tak-ada"); mime != "unknown" {
+		t.Fatalf("file hilang harus unknown, dapat %q", mime)
+	}
+}
+
+func TestTopType(t *testing.T) {
+	if TopType("video/mp4") != "video" || TopType("image/png") != "image" ||
+		TopType("application/octet-stream") != "application" || TopType("unknown") != "unknown" {
+		t.Fatal("TopType salah")
+	}
+}
