@@ -440,7 +440,14 @@ func isDirectToken(tok []byte) bool {
 		return true
 	}
 	// UTF-16 variants mengandung NUL -> tak pernah lolos inTextRun, direct saja.
-	return bytes.IndexByte(tok, 0) >= 0
+	if bytes.IndexByte(tok, 0) >= 0 {
+		return true
+	}
+	// Token >=4 byte cukup unik di data biner (256^-4 per posisi):
+	// cocok langsung TANPA cek konteks agar webshell PENDEK
+	// ("<?php eval(1); ?>") tak lolos. Hanya "<%" (2) dan "<?=" (3)
+	// yang butuh uji laju-teks.
+	return len(tok) >= 4
 }
 
 // inTextRun: panjang laju printable maksimal yang memuat token >= 24?
