@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 )
 
@@ -60,25 +61,63 @@ func (b BatchResult) IsBlocked() bool {
 	return b.Err != nil && len(b.Err.Error()) >= 7 && b.Err.Error()[:7] == "blocked"
 }
 
-// Batch: multi-input beda jenis sekaligus. File ditolak terkumpul per item,
-// error teknis (binary hilang) menghentikan langsung (fail-fast).
+// Batch: multi-input beda jenis sekaligus. File ditolak terkumpul per item.
+// Mode sekuensial (default): error teknis menghentikan langsung (fail-fast).
+// Mode paralel (jobs>1): semua dijalankan, hasil terkumpul semua.
+// Paralel bila opts["jobs"] > 1 (default 1 = sekuensial, hemat resource).
+// Urutan hasil selalu sama dengan urutan input.
 func Batch(items []BatchItem, opts map[string]any) []BatchResult {
-	out := make([]BatchResult, 0, len(items))
-	for _, it := range items {
-		merged := map[string]any{}
-		for k, v := range opts {
-			merged[k] = v
-		}
-		for k, v := range it.Opts {
-			merged[k] = v
-		}
-		r, err := Process(it.Path, merged)
-		out = append(out, BatchResult{Path: r.Path, Report: r.Report, Err: err})
-		if err != nil && !out[len(out)-1].IsBlocked() {
-			break // error teknis: berhenti, jangan lanjutkan batch
+	jobs := 1
+	if v, ok := opts["jobs"]; ok {
+		switch n := v.(type) {
+		case int:
+			if n > 1 {
+				jobs = n
+			}
+		case float64:
+			if n > 1 {
+				jobs = int(n)
+			}
 		}
 	}
+	out := make([]BatchResult, len(items))
+	if jobs == 1 {
+		for i, it := range items {
+			out[i] = runOne(it, opts)
+			if out[i].Err != nil && !out[i].IsBlocked() {
+				return out[:i+1] // error teknis: berhenti
+			}
+		}
+		return out
+	}
+	sem := make(chan struct{}, jobs)
+	var wg sync.WaitGroup
+	for i, it := range items {
+		wg.Add(1)
+		go func(i int, it BatchItem) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			out[i] = runOne(it, opts)
+		}(i, it)
+	}
+	wg.Wait()
 	return out
+}
+
+func runOne(it BatchItem, opts map[string]any) BatchResult {
+	merged := map[string]any{}
+	for k, v := range opts {
+		if k == "jobs" {
+			continue
+		}
+		merged[k] = v
+	}
+	for k, v := range it.Opts {
+		merged[k] = v
+	}
+	r, err := Process(it.Path, merged)
+	return BatchResult{Path: r.Path, Report: r.Report, Err: err}
 }
 
 // Process memanggil binary core. Set GUARDCOMPRESS_BIN atau taruh binary di core/bin.

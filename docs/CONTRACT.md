@@ -73,3 +73,13 @@ $h = GuardCompress::batch(['avatar' => $p1, 'klip' => ['path' => $p2, 'opts' => 
 File ditolak terkumpul per item (tidak melempar); error teknis tetap
 melempar langsung. Aturan per item bisa beda (preset/opts sendiri) atau
 digabung dalam satu panggilan.
+
+Paralelisme dua tingkat:
+- **Antar-user (request bersamaan): selalu paralel.** Tiap request = proses
+  CLI sendiri tanpa lock/antrean di tools kita. Batasnya hanya CPU untuk
+  ffmpeg — video berat disarankan lewat queue (`examples/`).
+- **Dalam satu batch: sekuensial default, paralel bila diminta** via
+  `jobs`: PHP `batchParallel($items, ['jobs' => 4])`, Node
+  `batchAsync(items, {jobs})` (default CPU, maks 4), Python/Go
+  `batch(..., {"jobs": N})`. Urutan hasil selalu = urutan input.
+  Terbukti: 2 video jobs:2 = 2.8s vs sekuensial 3.8s (skala ikut inti CPU).

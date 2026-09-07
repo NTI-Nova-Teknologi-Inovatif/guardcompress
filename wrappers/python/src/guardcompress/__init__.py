@@ -70,23 +70,39 @@ def batch(items, opts: dict | None = None) -> dict | list:
     """Batch multi-input beda jenis sekaligus.
     items: {"avatar": path, "video": path} atau [{"path":..., "opts":...}].
     File ditolak terkumpul (ok False); error teknis tetap raise.
+    Paralel bila opts["jobs"] > 1 (ThreadPool, default 1 = sekuensial).
+    Urutan hasil selalu sama dengan urutan input.
     """
+    import concurrent.futures
+
     opts = opts or {}
+    jobs = opts.get("jobs", 1)
+    try:
+        jobs = int(jobs)
+    except (TypeError, ValueError):
+        jobs = 1
     if isinstance(items, dict):
         entries = [(k, ({"path": v} if isinstance(v, str) else v)) for k, v in items.items()]
-        out: dict | list = {}
+        as_dict = True
     else:
         entries = [(i, ({"path": v} if isinstance(v, str) else v)) for i, v in enumerate(items)]
-        out = []
-    for key, it in entries:
-        merged = {**opts, **(it.get("opts") or {})}
+        as_dict = False
+
+    def _one(it):
+        merged = {k: v for k, v in opts.items() if k != "jobs"}
+        merged.update(it.get("opts") or {})
         try:
             r = process(it["path"], merged)
-            val = {"ok": True, **r}
+            return {"ok": True, **r}
         except BlockedError as e:
-            val = {"ok": False, "blocked": True, "reason": str(e), "report": e.report}
-        if isinstance(out, dict):
-            out[key] = val
-        else:
-            out.append(val)
-    return out
+            return {"ok": False, "blocked": True, "reason": str(e), "report": e.report}
+
+    if jobs > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as ex:
+            vals = list(ex.map(lambda kv: _one(kv[1]), entries))
+    else:
+        # Sekuensial: error teknis raise langsung (fail-fast).
+        vals = [_one(it) for _, it in entries]
+    if as_dict:
+        return {k: v for (k, _), v in zip(entries, vals)}
+    return vals
