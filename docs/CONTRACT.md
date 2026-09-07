@@ -8,6 +8,7 @@ Prinsip: **sinyal tolak selalu eksplisit &Typed, fitur opsional selalu diam.**
 |---|---|---|
 | Bersih | `0` | return hasil normal |
 | File berbahaya / berubah setelah lolos | `2` | **exception khusus**: PHP `InfectedFileException`, Node `e.code==='BLOCKED'`, Python `BlockedError`, Go `err "blocked: ..."` |
+| Server penuh (backpressure) | `1` + `details.busy` | **retry**: PHP `BusyException`, Node `e.code==='BUSY'`, Python `BusyError`, Go `IsBusy(err)` → balas HTTP **429**, bukan 422 |
 | Error teknis (file hilang, ffmpeg gagal, config rusak) | `1` | exception umum (`GuardException` / `Error` / `RuntimeError` / `error`) |
 
 Contoh tangkap per bahasa ada di `core/main.go` (`init --lang=...`) dan `examples/`.

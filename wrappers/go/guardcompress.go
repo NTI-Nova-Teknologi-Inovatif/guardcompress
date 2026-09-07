@@ -58,7 +58,29 @@ type BatchResult struct {
 
 // IsBlocked: true bila file ditolak scanner (bukan error teknis).
 func (b BatchResult) IsBlocked() bool {
-	return b.Err != nil && len(b.Err.Error()) >= 7 && b.Err.Error()[:7] == "blocked"
+	return IsBlocked(b.Err)
+}
+
+func isBusyReport(report map[string]any) bool {
+	if report == nil {
+		return false
+	}
+	d, ok := report["details"].(map[string]any)
+	if !ok {
+		return false
+	}
+	b, _ := d["busy"].(bool)
+	return b
+}
+
+// IsBlocked: true bila file ditolak scanner (bukan error teknis).
+func IsBlocked(err error) bool {
+	return err != nil && len(err.Error()) >= 7 && err.Error()[:7] == "blocked"
+}
+
+// IsBusy: true bila server penuh (backpressure) -> retry nanti (HTTP 429).
+func IsBusy(err error) bool {
+	return err != nil && len(err.Error()) >= 5 && err.Error()[:5] == "busy:"
 }
 
 // Batch: multi-input beda jenis sekaligus. File ditolak terkumpul per item.
@@ -159,6 +181,10 @@ func Process(inPath string, opts map[string]any) (Result, error) {
 		os.RemoveAll(outDir) // gagal/blocked: buang output
 		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 2 {
 			return Result{}, fmt.Errorf("blocked: %v", report["reason"])
+		}
+		// Sinyal busy (backpressure): server penuh -> retry, bukan vonis jahat.
+		if isBusyReport(report) {
+			return Result{}, fmt.Errorf("busy: %v", report["reason"])
 		}
 		return Result{}, fmt.Errorf("guardcompress failed: %v (%s)", err, string(out))
 	}

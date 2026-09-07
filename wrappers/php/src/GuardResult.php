@@ -20,3 +20,7 @@ class GuardException extends \RuntimeException
 }
 
 class InfectedFileException extends GuardException {}
+
+// BusyException: server penuh (backpressure) -> balas HTTP 429 + retry,
+// BUKAN 422 (file belum tentu jahat, coba lagi nanti).
+class BusyException extends GuardException {}

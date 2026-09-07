@@ -33,7 +33,12 @@ function processFile(inPath, opts = {}) {
 
   const cleanup = () => { try { fs.rmSync(outDir, { recursive: true, force: true }); } catch {} };
   if (r.status === 2) { cleanup(); const e = new Error('blocked: ' + (report.reason || '')); e.report = report; e.code = 'BLOCKED'; throw e; }
-  if (r.status !== 0) { cleanup(); const e = new Error('guardcompress failed: ' + (report.reason || r.stderr)); e.report = report; throw e; }
+  if (r.status !== 0) {
+    cleanup();
+    // Sinyal busy (backpressure): server penuh -> HTTP 429 + retry, bukan 422.
+    if (report.details && report.details.busy) { const e = new Error(report.reason || 'server busy'); e.report = report; e.code = 'BUSY'; throw e; }
+    const e = new Error('guardcompress failed: ' + (report.reason || r.stderr)); e.report = report; throw e;
+  }
   if (r.error) { cleanup(); const e = new Error('guardcompress timeout/crash: ' + r.error.message); e.report = report; throw e; }
   // Gagal cepat di batas: jangan kembalikan path undefined yang meledak
   // belakangan di kode app dengan pesan membingungkan.
@@ -65,7 +70,11 @@ function processFileAsync(inPath, opts = {}) {
         try { report = JSON.parse((stdout || '').trim().split('\n').pop() || '{}'); }
         catch { report = { reason: stdout + stderr }; }
         if (code === 2) { cleanup(); const e = new Error('blocked: ' + (report.reason || '')); e.report = report; e.code = 'BLOCKED'; return reject(e); }
-        if (code !== 0) { cleanup(); const e = new Error('guardcompress failed: ' + (report.reason || stderr)); e.report = report; return reject(e); }
+        if (code !== 0) {
+          cleanup();
+          if (report.details && report.details.busy) { const e = new Error(report.reason || 'server busy'); e.report = report; e.code = 'BUSY'; return reject(e); }
+          const e = new Error('guardcompress failed: ' + (report.reason || stderr)); e.report = report; return reject(e);
+        }
         if (!report.out_path) { cleanup(); const e = new Error('guardcompress: out_path hilang dari report'); e.report = report; return reject(e); }
         resolve({ path: report.out_path, report });
       });

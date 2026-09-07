@@ -104,6 +104,9 @@ class GuardCompress
                 self::rmDir($h['outDir']);
                 $out[$key] = ['ok' => false, 'blocked' => true,
                     'reason' => $report['reason'] ?? 'blocked', 'report' => $report];
+            } elseif (!empty($report['details']['busy'])) {
+                self::rmDir($h['outDir']);
+                throw new BusyException($report['reason'] ?? 'server busy', $report);
             } elseif ($code !== 0 || empty($report['out_path']) || !is_file($report['out_path'])) {
                 self::rmDir($h['outDir']);
                 throw new GuardException($report['reason'] ?? 'guardcompress failed', $report);
@@ -198,6 +201,11 @@ class GuardCompress
         if ($code === 2) {
             self::rmDir($outDir); // file kotor: buang output
             throw new InfectedFileException($report['reason'] ?? 'blocked', $report);
+        }
+        // Sinyal busy (backpressure): server penuh, minta retry (HTTP 429).
+        if (!empty($report['details']['busy'])) {
+            self::rmDir($outDir);
+            throw new BusyException($report['reason'] ?? 'server busy', $report);
         }
         if ($code !== 0) {
             self::rmDir($outDir);

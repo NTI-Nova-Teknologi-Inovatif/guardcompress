@@ -7,6 +7,14 @@ class BlockedError(Exception):
         super().__init__(msg)
         self.report = report or {}
 
+
+class BusyError(Exception):
+    """Server penuh (backpressure) -> balas HTTP 429 + retry, bukan 422."""
+
+    def __init__(self, msg, report=None):
+        super().__init__(msg)
+        self.report = report or {}
+
 def _resolve_binary() -> str:
     if os.environ.get("GUARDCOMPRESS_BIN"):
         return os.environ["GUARDCOMPRESS_BIN"]
@@ -45,6 +53,8 @@ def process(in_path: str, opts: dict | None = None) -> dict:
         raise BlockedError("blocked: " + str(report.get("reason")), report)
     if r.returncode != 0:
         shutil.rmtree(out, ignore_errors=True)
+        if isinstance(report.get("details"), dict) and report["details"].get("busy"):
+            raise BusyError(str(report.get("reason") or "server busy"), report)
         raise RuntimeError("guardcompress failed: " + str(report.get("reason", r.stderr)))
     # Gagal cepat di batas: jangan kembalikan path None yang meledak belakangan.
     if not report.get("out_path"):

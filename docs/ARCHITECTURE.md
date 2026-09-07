@@ -68,6 +68,7 @@ Rem berlapis (lihat `doctor`: `cpu_count`, `recommended_jobs`):
 | Lapisan | Implementasi |
 |---|---|
 | CPU per job | `ffmpeg_threads` default **2** (1 upload tak menelan semua core) |
+| Slot admission | semafor file lintas-proses (`internal/slots`, tanpa daemon): default = jumlah CPU, penuh → `busy` (HTTP 429). Lock yatim dibersihkan otomatis (15 mnt). `max_slots: 0` = tanpa batas |
 | Waktu per job | timeout core 100s < wrapper 120s (hang = error, bukan gantung) |
 | Ukuran per file | `max_mb` default 500 (lebih = blocked sebelum dibaca) |
 | Paralel per request | `jobs` default 1; naikkan maks `recommended_jobs` (= CPU/2) |

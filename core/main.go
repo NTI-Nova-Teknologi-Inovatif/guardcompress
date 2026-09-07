@@ -20,6 +20,7 @@ import (
 
 	"github.com/guardcompress/guardcompress/core/internal/compress"
 	"github.com/guardcompress/guardcompress/core/internal/guard"
+	"github.com/guardcompress/guardcompress/core/internal/slots"
 )
 
 var Version = "v0.1.0"
@@ -96,6 +97,9 @@ func runCheck() {
 
 	start := time.Now()
 	report := Report{InPath: *inPath, Details: map[string]any{}}
+	// Slot admission dilepas di SEMUA jalur keluar (fail memakai os.Exit,
+	// jadi release eksplisit — bukan defer).
+	var releaseSlot func()
 	// Struktur output di out-dir (gampang dicek manual):
 	//   <nama-aman>.<ext> + report.json (selalu ditulis, blocked pun ada jejaknya)
 	saveReport := func() {
@@ -106,6 +110,9 @@ func runCheck() {
 		_ = os.WriteFile(filepath.Join(*outDir, "report.json"), b, 0o644)
 	}
 	fail := func(msg string, code int) {
+		if releaseSlot != nil {
+			releaseSlot()
+		}
 		report.Status = "blocked"
 		if code == 1 {
 			report.Status = "error"
@@ -128,6 +135,25 @@ func runCheck() {
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
 		fail("cannot create out-dir: "+err.Error(), 1)
 	}
+
+	// BACKPRESSURE: rebut slot lintas-proses SEBELUM kerja berat.
+	// Penuh -> tolak cepat busy (HTTP 429), bukan terima lalu server tumbang.
+	// Default = jumlah CPU; 0 = tanpa batas (server khusus media).
+	maxSlots := runtime.NumCPU()
+	if v, ok := cfg["max_slots"]; ok {
+		switch n := v.(type) {
+		case float64:
+			maxSlots = int(n)
+		case int:
+			maxSlots = n
+		}
+	}
+	rel, err := slots.Acquire(filepath.Join(compress.CacheDir(), "slots"), maxSlots)
+	if err != nil {
+		report.Details["busy"] = true
+		fail("server busy, retry later", 1)
+	}
+	releaseSlot = rel
 
 	gres, err := guard.Scan(*inPath, cfg)
 	if err != nil {
@@ -184,6 +210,9 @@ func runCheck() {
 	report.Status = "clean"
 	report.TookMs = time.Since(start).Milliseconds()
 	saveReport()
+	if releaseSlot != nil {
+		releaseSlot()
+	}
 	b, _ := json.Marshal(report)
 	fmt.Println(string(b))
 }
@@ -234,7 +263,11 @@ func runVerify() {
 
 	start := time.Now()
 	report := Report{InPath: *inPath, Details: map[string]any{}}
+	var releaseSlot func()
 	done := func(status, reason string, code int) {
+		if releaseSlot != nil {
+			releaseSlot()
+		}
 		report.Status = status
 		report.Reason = reason
 		report.TookMs = time.Since(start).Milliseconds()
@@ -249,6 +282,22 @@ func runVerify() {
 	if err := json.Unmarshal([]byte(*configStr), &cfg); err != nil {
 		done("error", "invalid --config JSON: "+err.Error(), 1)
 	}
+	// Verify ikut antre slot yang sama (audit massal cron tak boleh menumbangkan server).
+	maxSlots := runtime.NumCPU()
+	if v, ok := cfg["max_slots"]; ok {
+		switch n := v.(type) {
+		case float64:
+			maxSlots = int(n)
+		case int:
+			maxSlots = n
+		}
+	}
+	rel, err := slots.Acquire(filepath.Join(compress.CacheDir(), "slots"), maxSlots)
+	if err != nil {
+		report.Details["busy"] = true
+		done("error", "server busy, retry later", 1)
+	}
+	releaseSlot = rel
 	// 1. Sidik sekarang vs sidik ingest -> ketahuan bila file diganti/diubah.
 	if *expectSHA != "" {
 		sum, err := fileSHA256(*inPath)
