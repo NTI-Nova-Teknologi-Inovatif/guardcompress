@@ -112,10 +112,13 @@ func TestInvalidConfigRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	for label, cfg := range map[string]map[string]any{
-		"crf-negatif":  {"video_crf": -5},
-		"crf-lewat":    {"video_crf": 99},
-		"crf-teks":     {"video_crf": "x"},
-		"bitrate-aneh": {"audio_bitrate": "96k;rm -rf /"},
+		"crf-negatif":   {"video_crf": -5},
+		"crf-lewat":     {"video_crf": 99},
+		"crf-teks":      {"video_crf": "x"},
+		"bitrate-aneh":  {"audio_bitrate": "96k;rm -rf /"},
+		"threads-nol":   {"ffmpeg_threads": 0},
+		"threads-lewat": {"ffmpeg_threads": 99},
+		"threads-teks":  {"ffmpeg_threads": "all"},
 	} {
 		if _, err := Run(src, tmp+"/o.mp4", "video/mp4", cfg); err == nil {
 			t.Fatalf("%s harusnya ditolak", label)

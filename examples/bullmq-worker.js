@@ -1,4 +1,5 @@
 // Contoh BullMQ worker (Node): GuardCompress di background.
+// ANTI-DOWN: concurrency dibatasi (lihat `doctor` -> recommended_jobs).
 // npm i bullmq && node examples/bullmq-worker.js
 const { Worker } = require('bullmq');
 const fs = require('fs');
@@ -16,4 +17,4 @@ new Worker('uploads', async (job) => {
   } finally {
     fs.rm(tmpPath, { force: true }, () => {});
   }
-});
+}, { concurrency: 2 }); // ANTI-DOWN: maks 2 video bersamaan per worker

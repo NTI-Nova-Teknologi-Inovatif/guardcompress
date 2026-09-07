@@ -73,15 +73,27 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	if ok, _ := regexp.MatchString(`^[0-9]+k$`, abitrate); !ok {
 		return res, fmt.Errorf("invalid audio_bitrate (cth 96k): %v", cfg["audio_bitrate"])
 	}
+	// ANTI-DOWN: batasi thread CPU per job ffmpeg. Default 2 (aman di VPS
+	// kecil/shared; 1 upload tak bisa menelan semua core). Naikkan
+	// (cth 4-8) hanya di server khusus media + queue terbatas.
+	threads := "2"
+	if v, ok := cfg["ffmpeg_threads"]; ok {
+		threads = fmt.Sprintf("%v", v)
+	}
+	if n, err := strconv.Atoi(threads); err != nil || n < 1 || n > 32 {
+		return res, fmt.Errorf("invalid ffmpeg_threads (1-32): %v", cfg["ffmpeg_threads"])
+	}
 
 	var args []string
+	// "-threads" global ditaruh di depan agar berlaku untuk semua filter+codec.
+	tflag := []string{"-y", "-threads", threads}
 	switch {
 	case len(mime) >= 5 && mime[:5] == "video":
-		args = []string{"-y", "-i", inPath,
+		args = append(tflag, "-i", inPath,
 			"-vcodec", "libx264", "-crf", crf, "-preset", "veryfast",
 			"-movflags", "+faststart", "-pix_fmt", "yuv420p",
 			"-acodec", "aac", "-b:a", abitrate,
-			outPath}
+			outPath)
 	case len(mime) >= 5 && mime[:5] == "audio" || mime == "application/ogg":
 		// Codec per format input; output ext diatur guard.OutExt
 		// (wav/flac besar -> mp3 hemat; ogg -> ogg; m4a -> m4a).
@@ -91,7 +103,7 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		} else if mime == "audio/mp4" {
 			acodec = "aac"
 		}
-		args = []string{"-y", "-i", inPath, "-codec:a", acodec, "-b:a", abitrate, outPath}
+		args = append(tflag, "-i", inPath, "-codec:a", acodec, "-b:a", abitrate, outPath)
 	case mime == "image/jpeg" || mime == "image/png" || mime == "image/webp" || mime == "image/gif":
 		maxDim := "1920"
 		if v, ok := cfg["image_max_dim"]; ok {
@@ -109,21 +121,21 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		}
 		// Kecilkan dimensi bila lebih besar dari maxDim, pertahankan aspek.
 		// JPEG/WebP: quality terkontrol. PNG: kompresi max (lossless).
-		args = []string{"-y", "-i", inPath,
-			"-vf", "scale=w='min(" + maxDim + ",iw)':h='-2'",
+		args = append(tflag, "-i", inPath,
+			"-vf", "scale=w='min("+maxDim+",iw)':h='-2'",
 			"-q:v", q,
-			outPath}
+			outPath)
 		if mime == "image/png" {
-			args = []string{"-y", "-i", inPath,
-				"-vf", "scale=w='min(" + maxDim + ",iw)':h='-2'",
+			args = append(tflag, "-i", inPath,
+				"-vf", "scale=w='min("+maxDim+",iw)':h='-2'",
 				"-compression_level", "9",
-				outPath}
+				outPath)
 		}
 		if mime == "image/gif" {
 			// GIF: downscale + palet optimal 1-pass (tetap animasi).
-			args = []string{"-y", "-i", inPath,
-				"-vf", "scale=w='min(" + maxDim + ",iw)':h=-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse",
-				outPath}
+			args = append(tflag, "-i", inPath,
+				"-vf", "scale=w='min("+maxDim+",iw)':h=-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse",
+				outPath)
 		}
 	default: // mime tak dikenal (tak lolos guard normal): copy aman
 		if err := copyFile(inPath, outPath); err != nil {

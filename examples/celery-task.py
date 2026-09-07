@@ -1,4 +1,8 @@
-"""Contoh Celery task (Python): GuardCompress di background."""
+"""Contoh Celery task (Python): GuardCompress di background.
+ANTI-DOWN: jalankan worker dengan concurrency terbatas, misal:
+  celery -A examples.celery-task worker --concurrency=2
+(lihat `doctor` -> recommended_jobs; ffmpeg_threads default 2/job)
+"""
 from celery import Celery
 from guardcompress import process, BlockedError
 import os

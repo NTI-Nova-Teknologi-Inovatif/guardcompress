@@ -59,3 +59,19 @@ Contoh: `evil.mp4.php` -> `evil_mp4_php.mp4`, `../../etc/passwd` -> `passwd.bin`
   (fail-closed); CHECKSUMS rilis hanya dilindungi TLS (roadmap: cosign);
   orphan ffmpeg bila WRAPPER di-kill paksa di Windows (core-kill aman via
   timeout; Linux aman via Pdeathsig).
+
+## 6. Anti-down (server tidak boleh tumbang)
+
+Ancaman: N user upload video bareng + ffmpeg rakus CPU/RAM/disk.
+Rem berlapis (lihat `doctor`: `cpu_count`, `recommended_jobs`):
+
+| Lapisan | Implementasi |
+|---|---|
+| CPU per job | `ffmpeg_threads` default **2** (1 upload tak menelan semua core) |
+| Waktu per job | timeout core 100s < wrapper 120s (hang = error, bukan gantung) |
+| Ukuran per file | `max_mb` default 500 (lebih = blocked sebelum dibaca) |
+| Paralel per request | `jobs` default 1; naikkan maks `recommended_jobs` (= CPU/2) |
+| Paralel antar worker | contoh queue dibatasi (`concurrency: 2`, `--concurrency=2`, Horizon maxProcesses) |
+| Video berat | wajib lewat queue (`examples/`), jangan di request HTTP langsung |
+| Web server | `client_max_body_size` + rate-limit upload + FPM `max_children` wajar |
+| Deploy check | jalankan `doctor` saat deploy; alert bila `ffmpeg_found=false` |

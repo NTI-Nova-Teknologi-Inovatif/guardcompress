@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/guardcompress/guardcompress/core/internal/compress"
@@ -276,11 +277,19 @@ func runVerify() {
 
 func runDoctor() {
 	ff := compress.FindFFmpeg()
+	nCPU := runtime.NumCPU()
+	rec := nCPU / 2
+	if rec < 1 {
+		rec = 1
+	}
 	info := map[string]any{
-		"version":      Version,
-		"ffmpeg":       ff,
-		"ffmpeg_found": ff != "",
-		"cache_dir":    compress.CacheDir(),
+		"version":                Version,
+		"ffmpeg":                 ff,
+		"ffmpeg_found":           ff != "",
+		"cache_dir":              compress.CacheDir(),
+		"cpu_count":              nCPU,
+		"recommended_jobs":       rec, // ANTI-DOWN: jobs paralel + worker queue jangan lewat ini
+		"ffmpeg_threads_default": 2,
 	}
 	if ff != "" {
 		info["ffmpeg_version"] = compress.ProbeFFmpegVersion(ff)
