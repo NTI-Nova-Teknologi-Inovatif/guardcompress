@@ -1,0 +1,6 @@
+{
+  "allow_ext": ["jpg", "jpeg", "png", "webp", "gif", "mp4", "mp3"],
+  "max_mb": 50,
+  "ffmpeg_threads": 2,
+  "max_slots": null
+}

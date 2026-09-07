@@ -1,15 +1,16 @@
-# Web demo GuardCompress (port 8080)
+# Web contoh uji GuardCompress (port 8080)
 
-Folder mandiri: UI + tools salinan di `src/` (tidak require kode utama,
-cuma butuh path binary core). Aturan upload di `config.php`.
+JS doang (Node stdlib, tanpa `npm install`, tanpa PHP). Cuma contoh buat
+coba sistem, bukan buat produksi. Tools di `src/` milik folder ini,
+nggak require kode utama — cuma butuh path binary core.
 
 ```powershell
-# dari root repo
+# dari folder web/
 $env:GUARDCOMPRESS_BIN = "C:\tools\GuardCompress\core\bin\guardcompress-windows-amd64.exe"
-cd web/public
-php -S localhost:8080
+node server.js
 # buka http://localhost:8080, drop file, hasil langsung muncul
 ```
 
 - Bersih: tersimpan di `web/uploads/`, tampil + info hemat byte.
 - Virus: DITOLAK + alasan. Server penuh: disuruh coba lagi (429).
+- Aturan upload di `config.json`.

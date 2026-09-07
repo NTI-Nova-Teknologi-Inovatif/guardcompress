@@ -1,0 +1,10 @@
+{
+  "name": "guardcompress-web-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web contoh uji GuardCompress (Node stdlib, tanpa dependensi)",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
