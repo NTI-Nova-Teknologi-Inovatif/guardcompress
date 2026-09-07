@@ -52,6 +52,24 @@ EICAR = "X5O!P%@AP[4\\" + "PZX54(P^)7CC)7}$" + "EICAR-STANDARD-ANTIVIRUS-TEST-FI
 P11 = EICAR.encode()
 P14 = b"... run cm" + b"d.ex" + b"e /c whoami ..."
 
+import io as _io
+import zipfile as _zf
+
+
+def _real_zip() -> bytes:
+    buf = _io.BytesIO()
+    with _zf.ZipFile(buf, "w", _zf.ZIP_DEFLATED) as z:
+        z.writestr("hello.txt", "halo dunia")
+    return buf.getvalue()
+
+
+def _mini_pe() -> bytes:
+    pe = bytearray(0x60)
+    pe[0:2] = b"MZ"
+    pe[0x3C] = 0x40
+    pe[0x40:0x44] = b"PE\x00\x00"
+    return bytes(pe)
+
 PNG = base_png()
 CASES: list = [
     ("01-tail.png", PNG + b"\n" + P01.encode() + b"\n", "blocked"),
@@ -68,6 +86,9 @@ CASES: list = [
     ("12-control-clean.png", PNG, "clean"),
     ("13-control-binary.png", PNG + noise(300) + b"<" + b"%" + noise(300), "clean"),
     ("14-cmd.png", PNG + b"\n" + P14 + b"\n", "blocked"),
+    ("15-zip-in-png.png", PNG + _real_zip(), "blocked"),
+    ("16-pe-in-png.png", PNG + _mini_pe(), "blocked"),
+    ("17-control-pk.png", PNG + b"PK" * 500, "clean"),
 ]
 
 expected = {}

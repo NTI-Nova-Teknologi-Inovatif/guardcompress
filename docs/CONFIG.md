@@ -21,6 +21,8 @@ Tak diisi = default aman (diam, tidak error).
 | `ffmpeg_threads` | `2` (1–32) | VPS besar + queue: `4`; shared hosting: `1` |
 | `timeoutSec` / `timeout_sec` | 100 core / 120 wrapper | video panjang + queue: `600` |
 | `min_compress_kb` | `0` (selalu kompres) | situs avatar: `100` — file kecil langsung copy byte-identik (hemat CPU, tanpa artefak rekompresi) |
+| `block_embedded_containers` | `true` | `false` hanya bila app memang butuh file berisi arsip/biner (resiko sendiri) |
+| `clamav` | `"auto"` | `true` = wajib ada & dipakai; `false` = mati; auto = dipakai bila terinstal, diam bila tidak |
 | `thumb_widths` | tak ada | `[300, 800]` atau `[{"w":300,"suffix":"-sm"}]` — turunan ukuran sekali jalan (tanpa upscale; gagal turunan tak gugurkan hasil utama) |
 | `webp` | `false` | `true` — salinan `.webp` untuk output utama + tiap thumb |
 | `jobs` (batch) | `1` | batch paralel: maks `recommended_jobs` (lihat `doctor`) |

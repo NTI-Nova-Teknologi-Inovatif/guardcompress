@@ -262,6 +262,29 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		return res, nil
 	}
 
+	// Container tersembunyi (ZIP/RAR/7z/PE/ELF tervalidasi struktur).
+	// Default AKTIF (inti keamanan); matikan hanya bila app memang butuh
+	// ("block_embedded_containers": false) — resiko tanggung sendiri.
+	if v, ok := cfg["block_embedded_containers"].(bool); !ok || v {
+		if found := scanContainers(f, res.Size); found != "" {
+			res.Reason = found
+			res.Details["container"] = found
+			return res, nil
+		}
+	}
+
+	// ClamAV opsional: dipakai bila terinstal ("auto"), dilewati diam bila tidak.
+	// Nyalakan paksa via {"clamav": true} (error bila tak ada), matikan via false.
+	if sig, used, err := scanClamAV(path, cfg); err != nil {
+		return res, err
+	} else if used {
+		res.Details["clamav"] = sig
+		if sig != "" {
+			res.Reason = "clamav detected: " + sig
+			return res, nil
+		}
+	}
+
 	// Allowlist fleksibel: `allow` (MIME) GABUNG `allow_ext` (extension
 	// familiar: ["jpg","mp4"]). Extension tak dikenal = error developer.
 	allow, err := resolveAllow(cfg)

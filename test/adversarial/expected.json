@@ -12,5 +12,8 @@
   "11-avtest-string.png": "blocked",
   "12-control-clean.png": "clean",
   "13-control-binary.png": "clean",
-  "14-cmd.png": "blocked"
+  "14-cmd.png": "blocked",
+  "15-zip-in-png.png": "blocked",
+  "16-pe-in-png.png": "blocked",
+  "17-control-pk.png": "clean"
 }
