@@ -14,3 +14,15 @@ node server.js
 - Bersih: tersimpan di `web/uploads/`, tampil + info hemat byte.
 - Virus: DITOLAK + alasan. Server penuh: disuruh coba lagi (429).
 - Aturan upload di `config.json`.
+
+## File uji (`web/test-files/`, lokal saja, tidak ikut commit)
+
+- `asli.png` — foto asli -> harus BERSIH.
+- File beracun dibuat lalu **dimakan Windows Defender duluan** (terbukti
+  dari log Threat-nya: pola kita memang dikenali sebagai webshell).
+  Supaya bisa uji penolakan tools kita di laptop ini, kecualikan dulu
+  foldernya (butuh admin): Windows Security -> Virus & threat protection
+  -> Manage settings -> Exclusions -> Add -> Folder ->
+  `C:\tools\GuardCompress\web\test-files`. Habis itu bikin file beracunnya,
+  drop di web, harusnya DITOLAK. Di server (tanpa AV) tidak perlu ini.
+
