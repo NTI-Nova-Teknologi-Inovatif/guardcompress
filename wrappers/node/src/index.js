@@ -41,4 +41,9 @@ function processFile(inPath, opts = {}) {
   return { path: report.out_path, report };
 }
 
-module.exports = { process: processFile, processFile, resolveBinary };
+module.exports = { process: processFile, processFile, resolveBinary,
+  // Preset per jenis (1 sistem di belakangnya, opts user menang bila menimpa).
+  image: (p, o = {}) => processFile(p, { allow_ext: ['jpg', 'jpeg', 'png', 'webp', 'gif'], ...o }),
+  video: (p, o = {}) => processFile(p, { allow_ext: ['mp4', 'mov', 'webm', 'mkv', 'avi'], ...o }),
+  audio: (p, o = {}) => processFile(p, { allow_ext: ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'flac'], ...o }),
+};

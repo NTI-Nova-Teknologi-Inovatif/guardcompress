@@ -56,5 +56,11 @@ GuardCompress::process($file, ['allow_ext' => ['jpg','png','gif','mp4','mp3']]);
 
 Catatan: `wav/flac` besar otomatis jadi `mp3`; `mkv` keluar sebagai `.webm`
 (keluarga EBML sama, ramah browser); `M4A` tidak pernah dianggap video
-(brand ftyp dibedakan). `allow` (MIME) dan `allow_ext` digabung (union);
-extension tak dikenal = error developer yang jelas, bukan blocked.
+(brand ftyp dibedakan). Bila `allow` atau `allow_ext` diisi, ia MENGGANTI
+default (keduanya diisi = gabungan); extension tak dikenal = error developer
+yang jelas, bukan blocked.
+
+Preset siap pakai (satu sistem di belakangnya, argumen user menang):
+`GuardCompress::image($p)` / `::video($p)` / `::audio($p)` (PHP),
+`gc.image/video/audio` (Node), `image()/video()/audio()` (Python & Go).
+Batch = loop biasa + kumpulkan hasil (lihat `examples/`).

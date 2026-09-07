@@ -5,6 +5,26 @@ namespace GuardCompress;
 
 class GuardCompress
 {
+    // Satu sistem fleksibel: process() umum + preset per jenis.
+    // Contoh: GuardCompress::image($path)  // khusus jpg/png/gif/webp
+    //         GuardCompress::video($path, ['video_crf' => 30])
+    //         GuardCompress::audio($path)
+    public static function image(string $inPath, array $opts = []): GuardResult
+    {
+        // $opts menang bila user menimpa allow_ext sendiri.
+        return self::process($inPath, $opts + ['allow_ext' => ['jpg', 'jpeg', 'png', 'webp', 'gif']]);
+    }
+
+    public static function video(string $inPath, array $opts = []): GuardResult
+    {
+        return self::process($inPath, $opts + ['allow_ext' => ['mp4', 'mov', 'webm', 'mkv', 'avi']]);
+    }
+
+    public static function audio(string $inPath, array $opts = []): GuardResult
+    {
+        return self::process($inPath, $opts + ['allow_ext' => ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'flac']]);
+    }
+
     public static function process(string $inPath, array $opts = []): GuardResult
     {
         $bin = self::resolveBinary();

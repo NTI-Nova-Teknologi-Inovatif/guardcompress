@@ -208,6 +208,11 @@ func TestAllowExt(t *testing.T) {
 	if !r.Allowed {
 		t.Fatal("harusnya allowed via union allow+allow_ext")
 	}
+	// allow_ext SAJA mengganti default (semantik preset): png ditolak preset video
+	r, _ = Scan(png, map[string]any{"allow_ext": []any{"mp4"}})
+	if r.Allowed {
+		t.Fatal("allow_ext video saja harus menolak png")
+	}
 	// extension ngawur = error developer (bukan blocked)
 	_, err = Scan(png, map[string]any{"allow_ext": []any{"exe"}})
 	if err == nil {

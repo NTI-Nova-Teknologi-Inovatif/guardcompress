@@ -88,21 +88,32 @@ func mimeAllowed(mime string, allow []string) bool {
 	return false
 }
 
-// resolveAllow: allowlist efektif = `allow` (atau default) GABUNG `allow_ext`.
+// resolveAllow: daftar izin efektif.
+//
+//	tanpa allow & tanpa allow_ext -> default bawaan
+//	hanya allow                 -> persis itu (ganti default)
+//	hanya allow_ext             -> persis petanya (preset image()/video()/audio())
+//	keduanya                    -> gabungan (union)
+//
 // Extension tak dikenal = error developer (exit 1), bukan blocked.
 func resolveAllow(cfg map[string]any) ([]string, error) {
-	allow := defaultAllow
+	var hasAllow bool
+	var allow []string
 	if raw, ok := cfg["allow"].([]any); ok && len(raw) > 0 {
-		allow = nil
+		hasAllow = true
 		for _, a := range raw {
 			if s, ok := a.(string); ok {
 				allow = append(allow, s)
 			}
 		}
 	} else if raw2, ok := cfg["allow"].([]string); ok && len(raw2) > 0 {
+		hasAllow = true
 		allow = raw2
 	}
-	if raw, ok := cfg["allow_ext"].([]any); ok {
+	var hasExt bool
+	var mapped []string
+	if raw, ok := cfg["allow_ext"].([]any); ok && len(raw) > 0 {
+		hasExt = true
 		for _, e := range raw {
 			s, ok := e.(string)
 			if !ok {
@@ -112,10 +123,19 @@ func resolveAllow(cfg map[string]any) ([]string, error) {
 			if !ok {
 				return nil, fmt.Errorf("unknown allow_ext %q (valid: jpg jpeg png webp gif mp4 mov webm mkv avi mp3 wav ogg oga m4a flac)", s)
 			}
-			allow = append(allow, m...)
+			mapped = append(mapped, m...)
 		}
 	}
-	return allow, nil
+	switch {
+	case hasAllow && hasExt:
+		return append(allow, mapped...), nil
+	case hasAllow:
+		return allow, nil
+	case hasExt:
+		return mapped, nil
+	default:
+		return defaultAllow, nil
+	}
 }
 
 // Token berbahaya: webshell / script polyglot yang sering ditempel di media.

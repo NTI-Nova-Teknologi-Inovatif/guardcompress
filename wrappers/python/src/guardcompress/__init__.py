@@ -51,3 +51,16 @@ def process(in_path: str, opts: dict | None = None) -> dict:
         shutil.rmtree(out, ignore_errors=True)
         raise RuntimeError("guardcompress: out_path hilang dari report")
     return {"path": report.get("out_path"), "report": report}
+
+
+# Preset per jenis (1 sistem di belakangnya, opts user menang bila menimpa).
+def image(in_path: str, opts: dict | None = None) -> dict:
+    return process(in_path, {"allow_ext": ["jpg", "jpeg", "png", "webp", "gif"], **(opts or {})})
+
+
+def video(in_path: str, opts: dict | None = None) -> dict:
+    return process(in_path, {"allow_ext": ["mp4", "mov", "webm", "mkv", "avi"], **(opts or {})})
+
+
+def audio(in_path: str, opts: dict | None = None) -> dict:
+    return process(in_path, {"allow_ext": ["mp3", "wav", "ogg", "oga", "m4a", "flac"], **(opts or {})})
