@@ -26,16 +26,17 @@ import (
 var Version = "v0.1.0"
 
 type Report struct {
-	Status    string         `json:"status"` // clean | blocked | error
-	InPath    string         `json:"in_path"`
-	OutPath   string         `json:"out_path,omitempty"`
-	Detected  string         `json:"detected_mime"`
-	OrigBytes int64          `json:"orig_bytes"`
-	NewBytes  int64          `json:"new_bytes,omitempty"`
-	SHA256    string         `json:"sha256,omitempty"` // sidik output (simpan di DB!)
-	TookMs    int64          `json:"took_ms"`
-	Reason    string         `json:"reason,omitempty"`
-	Details   map[string]any `json:"details,omitempty"`
+	Status    string           `json:"status"` // clean | blocked | error
+	InPath    string           `json:"in_path"`
+	OutPath   string           `json:"out_path,omitempty"`
+	Detected  string           `json:"detected_mime"`
+	OrigBytes int64            `json:"orig_bytes"`
+	NewBytes  int64            `json:"new_bytes,omitempty"`
+	Thumbs    []compress.Thumb `json:"thumbs,omitempty"`
+	SHA256    string           `json:"sha256,omitempty"` // sidik output (simpan di DB!)
+	TookMs    int64            `json:"took_ms"`
+	Reason    string           `json:"reason,omitempty"`
+	Details   map[string]any   `json:"details,omitempty"`
 }
 
 func main() {
@@ -188,6 +189,7 @@ func runCheck() {
 	}
 	report.OutPath = outPath
 	report.NewBytes = cres.NewBytes
+	report.Thumbs = cres.Thumbs
 	report.Details["compress"] = cres.Details
 
 	// DETEKSI PERUBAHAN FORMAT: sniff ulang HASIL kompres, keluarganya harus

@@ -21,6 +21,8 @@ Tak diisi = default aman (diam, tidak error).
 | `ffmpeg_threads` | `2` (1–32) | VPS besar + queue: `4`; shared hosting: `1` |
 | `timeoutSec` / `timeout_sec` | 100 core / 120 wrapper | video panjang + queue: `600` |
 | `min_compress_kb` | `0` (selalu kompres) | situs avatar: `100` — file kecil langsung copy byte-identik (hemat CPU, tanpa artefak rekompresi) |
+| `thumb_widths` | tak ada | `[300, 800]` atau `[{"w":300,"suffix":"-sm"}]` — turunan ukuran sekali jalan (tanpa upscale; gagal turunan tak gugurkan hasil utama) |
+| `webp` | `false` | `true` — salinan `.webp` untuk output utama + tiap thumb |
 | `jobs` (batch) | `1` | batch paralel: maks `recommended_jobs` (lihat `doctor`) |
 | `quarantine_dir` | `""` (buang) | isi path hanya bila butuh forensik |
 | `GUARDCOMPRESS_CACHE` (env) | `~/.cache/guardcompress` | container/serverless: arahkan ke volume writable |

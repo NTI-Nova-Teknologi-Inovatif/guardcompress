@@ -21,7 +21,8 @@ Dijamin (boleh diandalkan di kode web):
 `out_path` + `new_bytes` (saat clean — wrapper melempar error jelas bila hilang).
 
 Opsional (baca bila dipakai, abaikan bila tidak — tidak pernah error):
-`sha256` (ada saat clean), `details.guard/compress/out_mime`, `took_ms`.
+`sha256` (ada saat clean), `thumbs` (daftar turunan bila diminta),
+`details.guard/compress/out_mime`, `took_ms`.
 
 ## 3. Fitur opsional: tidak dipakai = diam total
 

@@ -10,18 +10,32 @@ package compress
 import (
 	"context"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Result struct {
 	NewBytes int64
 	Details  map[string]any
+	Thumbs   []Thumb
+}
+
+// Thumb: turunan ukuran/format dari gambar utama.
+type Thumb struct {
+	Path   string `json:"path"`
+	Width  int    `json:"width"`
+	Bytes  int64  `json:"bytes"`
+	Format string `json:"format"`
 }
 
 func FindFFmpeg() string {
@@ -137,22 +151,9 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		}
 		// Kecilkan dimensi bila lebih besar dari maxDim, pertahankan aspek.
 		// JPEG/WebP: quality terkontrol. PNG: kompresi max (lossless).
-		args = append(tflag, "-i", inPath,
-			"-vf", "scale=w='min("+maxDim+",iw)':h='-2'",
-			"-q:v", q,
-			outPath)
-		if mime == "image/png" {
-			args = append(tflag, "-i", inPath,
-				"-vf", "scale=w='min("+maxDim+",iw)':h='-2'",
-				"-compression_level", "9",
-				outPath)
-		}
-		if mime == "image/gif" {
-			// GIF: downscale + palet optimal 1-pass (tetap animasi).
-			args = append(tflag, "-i", inPath,
-				"-vf", "scale=w='min("+maxDim+",iw)':h=-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse",
-				outPath)
-		}
+		// GIF: palet optimal 1-pass (tetap animasi).
+		args = append(append(tflag, "-i", inPath), imageCodecArgs(mime, maxDim, q)...)
+		args = append(args, outPath)
 	default: // mime tak dikenal (tak lolos guard normal): copy aman
 		if err := copyFile(inPath, outPath); err != nil {
 			return res, err
@@ -186,7 +187,188 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	}
 	res.NewBytes = fi.Size()
 	res.Details["mode"] = "ffmpeg"
+	// Turunan gambar (thumbs + webp) dibuat SETELAH output utama valid.
+	// Gagal di turunan tak menggugurkan hasil utama (dicatat, lanjut).
+	if isImageMime(mime) {
+		makeDerivatives(ctx, ff, inPath, outPath, mime, cfg, &res)
+	}
 	return res, nil
+}
+
+// thumbSpec: satu turunan ukuran. "300" -> suffix "-300w"; map
+// {"w":300,"suffix":"-sm"} -> suffix kustom.
+type thumbSpec struct {
+	w      int
+	suffix string
+}
+
+// parseThumbs: baca cfg "thumb_widths" ([300, 800] atau [{"w":300,"suffix":"-sm"}]).
+func parseThumbs(cfg map[string]any) []thumbSpec {
+	raw, ok := cfg["thumb_widths"].([]any)
+	if !ok {
+		return nil
+	}
+	var out []thumbSpec
+	for _, v := range raw {
+		switch t := v.(type) {
+		case float64:
+			if t >= 16 && t <= 8192 {
+				w := int(t)
+				out = append(out, thumbSpec{w, "-" + strconv.Itoa(w) + "w"})
+			}
+		case int:
+			if t >= 16 && t <= 8192 {
+				out = append(out, thumbSpec{t, "-" + strconv.Itoa(t) + "w"})
+			}
+		case map[string]any:
+			w := 0
+			switch n := t["w"].(type) {
+			case float64:
+				w = int(n)
+			case int:
+				w = n
+			}
+			if w < 16 || w > 8192 {
+				continue
+			}
+			sfx, _ := t["suffix"].(string)
+			if sfx == "" {
+				sfx = "-" + strconv.Itoa(w) + "w"
+			}
+			// sanitasi suffix: huruf/angka/dash saja
+			sfx = regexp.MustCompile(`[^A-Za-z0-9-]`).ReplaceAllString(sfx, "")
+			if sfx == "" {
+				sfx = "-" + strconv.Itoa(w) + "w"
+			}
+			out = append(out, thumbSpec{w, sfx})
+		}
+	}
+	return out
+}
+
+// probeWidth: lebar gambar via stdlib (jpeg/png/gif). 0 bila tak dikenal (webp).
+func probeWidth(path string) int {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+	c, _, err := image.DecodeConfig(f)
+	if err != nil {
+		return 0
+	}
+	return c.Width
+}
+
+// makeDerivatives: thumbs multi-ukuran + salinan webp di outDir yang sama.
+// Gagal di turunan tak menggugurkan hasil utama (dicatat di thumb_errors).
+func makeDerivatives(ctx context.Context, ff, inPath, outPath, mime string, cfg map[string]any, res *Result) {
+	specs := parseThumbs(cfg)
+	wantWebp, _ := cfg["webp"].(bool)
+	if len(specs) == 0 && !wantWebp {
+		return
+	}
+	q := "82"
+	if v, ok := cfg["image_quality"]; ok {
+		q = fmt.Sprintf("%v", v)
+	}
+	dir := filepath.Dir(outPath)
+	stem := strings.TrimSuffix(filepath.Base(outPath), filepath.Ext(outPath))
+	srcW := probeWidth(inPath)
+
+	runFF := func(args []string, dst string) error {
+		cmd := exec.CommandContext(ctx, ff, args...)
+		setDeathsig(cmd)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("%v: %s", err, tail(string(out), 500))
+		}
+		fi, err := os.Stat(dst)
+		if err != nil || fi.Size() == 0 {
+			return fmt.Errorf("output turunan kosong/hilang: %s", dst)
+		}
+		return nil
+	}
+	var made []string // file turunan format-asli (untuk dikonversi webp)
+	for _, s := range specs {
+		if srcW > 0 && srcW <= s.w {
+			continue // jangan upscale: buang-buang CPU
+		}
+		dst := filepath.Join(dir, stem+s.suffix+filepath.Ext(outPath))
+		cargs := append([]string{"-y", "-threads", threadsOf(cfg), "-i", inPath},
+			imageCodecArgs(mime, strconv.Itoa(s.w), q)...)
+		cargs = append(cargs, dst)
+		if err := runFF(cargs, dst); err != nil {
+			noteThumbErr(res, dst, err)
+			continue
+		}
+		fi, _ := os.Stat(dst)
+		res.Thumbs = append(res.Thumbs, Thumb{Path: dst, Width: s.w, Bytes: fi.Size(), Format: strings.TrimPrefix(filepath.Ext(dst), ".")})
+		made = append(made, dst)
+	}
+	if wantWebp {
+		// Konversi dari file JADI (lebih cepat & konsisten daripada dari input).
+		targets := append([]string{outPath}, made...)
+		for _, src := range targets {
+			dst := strings.TrimSuffix(src, filepath.Ext(src)) + ".webp"
+			if dst == src {
+				continue
+			}
+			wargs := []string{"-y", "-threads", threadsOf(cfg), "-i", src,
+				"-c:v", "libwebp", "-quality", q, dst}
+			if err := runFF(wargs, dst); err != nil {
+				noteThumbErr(res, dst, err)
+				continue
+			}
+			fi, _ := os.Stat(dst)
+			res.Thumbs = append(res.Thumbs, Thumb{Path: dst, Width: 0, Bytes: fi.Size(), Format: "webp"})
+		}
+	}
+}
+
+func noteThumbErr(res *Result, dst string, err error) {
+	var list []string
+	if v, ok := res.Details["thumb_errors"].([]string); ok {
+		list = v
+	}
+	res.Details["thumb_errors"] = append(list, dst+": "+err.Error())
+}
+
+// threadsOf: baca ulang batas thread (dipakai tiap pemanggilan ffmpeg turunan).
+func threadsOf(cfg map[string]any) string {
+	if v, ok := cfg["ffmpeg_threads"]; ok {
+		if s := fmt.Sprintf("%v", v); s != "" {
+			if n, err := strconv.Atoi(s); err == nil && n >= 1 && n <= 32 {
+				return s
+			}
+		}
+	}
+	return "2"
+}
+
+// isImageMime: keluarga gambar yang didukung turunan.
+func isImageMime(mime string) bool {
+	switch mime {
+	case "image/jpeg", "image/png", "image/webp", "image/gif":
+		return true
+	}
+	return false
+}
+
+// imageCodecArgs: argumen ffmpeg untuk keluarga codec gambar (1 code path
+// dipakai output utama + thumbs agar konsisten).
+// CATATAN: string filter GIF dipertahankan byte-identik dengan versi yang
+// terbukti lolos TestGifCompressReal (h tanpa kutip sebelum :flags).
+func imageCodecArgs(mime, dim, q string) []string {
+	switch mime {
+	case "image/png":
+		return []string{"-vf", "scale=w='min(" + dim + ",iw)':h='-2'",
+			"-compression_level", "9"}
+	case "image/gif":
+		return []string{"-vf", "scale=w='min(" + dim + ",iw)':h=-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse"}
+	default:
+		return []string{"-vf", "scale=w='min(" + dim + ",iw)':h='-2'",
+			"-q:v", q}
+	}
 }
 
 func copyFile(src, dst string) error {

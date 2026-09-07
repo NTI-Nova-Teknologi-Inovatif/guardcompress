@@ -1,6 +1,8 @@
 package compress
 
 import (
+	"image"
+	_ "image/jpeg"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,8 +100,7 @@ func TestGifCompressReal(t *testing.T) {
 	}
 }
 
-func TestInvalidConfigRejected(t *testing.T) {
-	// AUDIT: nilai config liar harus ditolak tegas sebelum ffmpeg dipanggil.
+func TestInvalidConfigRejected(t *testing.T) { // AUDIT: nilai config liar harus ditolak tegas sebelum ffmpeg dipanggil.
 	// Paksa mode copy (ffmpeg absen mustahil di sini) — validasi jalan duluan
 	// hanya untuk branch ffmpeg; guard-only copy tidak butuh crf. Maka uji
 	// butuh ffmpeg: skip bila absen.
@@ -169,5 +170,57 @@ func TestSkipSmallFiles(t *testing.T) {
 	}
 	if res2.Details["mode"] != "ffmpeg" {
 		t.Fatalf("default harus ffmpeg, dapat %v", res2.Details["mode"])
+	}
+}
+
+func TestThumbsAndWebp(t *testing.T) {
+	if FindFFmpeg() == "" {
+		t.Skip("butuh ffmpeg")
+	}
+	ff := FindFFmpeg()
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "foto.jpg")
+	gen := exec.Command(ff, "-y", "-v", "error",
+		"-f", "lavfi", "-i", "testsrc=duration=1:size=1200x800:rate=1",
+		"-frames:v", "1", src)
+	if out, err := gen.CombinedOutput(); err != nil {
+		t.Fatalf("gagal bikin sample: %v\n%s", err, out)
+	}
+	out := filepath.Join(tmp, "foto.jpg")
+	res, err := Run(src, out, "image/jpeg", map[string]any{
+		"thumb_widths": []any{300.0, map[string]any{"w": 800.0, "suffix": "-md"}},
+		"webp":         true,
+	})
+	if err != nil {
+		t.Fatalf("Run thumbs gagal: %v", err)
+	}
+	// Harus ada: 300w jpg + md jpg + webp main + 2 webp thumb = 5
+	if len(res.Thumbs) != 5 {
+		t.Fatalf("harusnya 5 turunan, dapat %d: %+v", len(res.Thumbs), res.Thumbs)
+	}
+	for _, th := range res.Thumbs {
+		fi, err := os.Stat(th.Path)
+		if err != nil || fi.Size() == 0 {
+			t.Fatalf("thumb hilang/kosong: %s", th.Path)
+		}
+		if th.Format == "webp" {
+			head := make([]byte, 12)
+			f, _ := os.Open(th.Path)
+			_, _ = f.Read(head)
+			f.Close()
+			if string(head[:4]) != "RIFF" || string(head[8:]) != "WEBP" {
+				t.Fatalf("bukan webp valid: %s", th.Path)
+			}
+			continue
+		}
+		f, _ := os.Open(th.Path)
+		c, _, err := image.DecodeConfig(f)
+		f.Close()
+		if err != nil {
+			t.Fatalf("thumb tak bisa didecode: %s: %v", th.Path, err)
+		}
+		if c.Width > th.Width {
+			t.Fatalf("thumb %s lebar %d melebihi target %d", th.Path, c.Width, th.Width)
+		}
 	}
 }
