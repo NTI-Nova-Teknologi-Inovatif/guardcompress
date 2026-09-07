@@ -20,6 +20,7 @@ Tak diisi = default aman (diam, tidak error).
 | `max_slots` | jumlah CPU (`0` = tanpa batas) | server kecil turunkan (cth `2`); server media naikkan/`0` |
 | `ffmpeg_threads` | `2` (1–32) | VPS besar + queue: `4`; shared hosting: `1` |
 | `timeoutSec` / `timeout_sec` | 100 core / 120 wrapper | video panjang + queue: `600` |
+| `min_compress_kb` | `0` (selalu kompres) | situs avatar: `100` — file kecil langsung copy byte-identik (hemat CPU, tanpa artefak rekompresi) |
 | `jobs` (batch) | `1` | batch paralel: maks `recommended_jobs` (lihat `doctor`) |
 | `quarantine_dir` | `""` (buang) | isi path hanya bila butuh forensik |
 | `GUARDCOMPRESS_CACHE` (env) | `~/.cache/guardcompress` | container/serverless: arahkan ke volume writable |

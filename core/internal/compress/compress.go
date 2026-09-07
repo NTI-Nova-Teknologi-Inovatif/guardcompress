@@ -56,6 +56,22 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		return res, nil
 	}
 
+	// EFISIENSI: file di bawah ambang tak perlu dibayar ongkos spawn ffmpeg
+	// (~0.5-1 dtk/proses). Default 0 = selalu kompres (perilaku lama).
+	// Rekomendasi situs avatar: 100 (file <100KB langsung copy).
+	if kb := minCompressKB(cfg); kb > 0 {
+		if fi, err := os.Stat(inPath); err == nil && fi.Size() < int64(kb)*1024 {
+			if err := copyFile(inPath, outPath); err != nil {
+				return res, err
+			}
+			fi2, _ := os.Stat(outPath)
+			res.NewBytes = fi2.Size()
+			res.Details["mode"] = "copy (under min_compress_kb)"
+			res.Details["ffmpeg"] = ff
+			return res, nil
+		}
+	}
+
 	crf := "28"
 	if v, ok := cfg["video_crf"]; ok {
 		crf = fmt.Sprintf("%v", v)
@@ -215,6 +231,23 @@ func ctxTimeout(cfg map[string]any) (context.Context, context.CancelFunc) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
 	return ctx, cancel
+}
+
+// minCompressKB: ambang lewati-kompres (0 = selalu kompres).
+func minCompressKB(cfg map[string]any) int {
+	for _, k := range []string{"min_compress_kb", "minCompressKb"} {
+		switch v := cfg[k].(type) {
+		case float64:
+			if v > 0 {
+				return int(v)
+			}
+		case int:
+			if v > 0 {
+				return v
+			}
+		}
+	}
+	return 0
 }
 
 // CacheDir: lokasi lazy-download ffmpeg static + slot admission.

@@ -135,3 +135,39 @@ func TestInvalidConfigRejected(t *testing.T) {
 		t.Fatal("image_quality=500 harusnya ditolak")
 	}
 }
+
+func TestSkipSmallFiles(t *testing.T) {
+	// EFISIENSI: file di bawah min_compress_kb langsung copy tanpa spawn ffmpeg.
+	if FindFFmpeg() == "" {
+		t.Skip("butuh ffmpeg (cabang skip ada setelah cek ffmpeg)")
+	}
+	tmp := t.TempDir()
+	small := filepath.Join(tmp, "kecil.png")
+	gen := exec.Command(FindFFmpeg(), "-y", "-v", "error",
+		"-f", "lavfi", "-i", "color=red:size=8x8:rate=1",
+		"-frames:v", "1", small)
+	if out, err := gen.CombinedOutput(); err != nil {
+		t.Fatalf("gagal bikin png mungil: %v\n%s", err, out)
+	}
+	fi, _ := os.Stat(small)
+	t.Logf("png mungil: %d bytes", fi.Size())
+	res, err := Run(small, filepath.Join(tmp, "o.png"), "image/png",
+		map[string]any{"min_compress_kb": 100})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Details["mode"] != "copy (under min_compress_kb)" {
+		t.Fatalf("harusnya skip-copy, dapat %v", res.Details["mode"])
+	}
+	if res.NewBytes != fi.Size() {
+		t.Fatal("copy harus byte-identik")
+	}
+	// Tanpa knob: perilaku lama (ffmpeg jalan).
+	res2, err := Run(small, filepath.Join(tmp, "o2.png"), "image/png", map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res2.Details["mode"] != "ffmpeg" {
+		t.Fatalf("default harus ffmpeg, dapat %v", res2.Details["mode"])
+	}
+}
