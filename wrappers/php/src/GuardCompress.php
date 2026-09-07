@@ -25,6 +25,31 @@ class GuardCompress
         return self::process($inPath, $opts + ['allow_ext' => ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'flac']]);
     }
 
+    // Batch multi-input beda jenis sekaligus.
+    // $items: ['avatar' => '/tmp/a.png', 'video' => '/tmp/b.mp4'] atau
+    //         [['path' => ..., 'opts' => [...]], ...].
+    // Tak pernah lempar untuk file DITOLAK (terkumpul per item); error teknis
+    // (binary hilang) tetap dilempar langsung (fail-fast).
+    // Return: ['avatar' => ['ok' => true, 'result' => GuardResult],
+    //          'video'  => ['ok' => false, 'blocked' => true, 'reason' => ...]]
+    public static function batch(array $items, array $opts = []): array
+    {
+        $out = [];
+        foreach ($items as $key => $item) {
+            $path = is_array($item) ? ($item['path'] ?? '') : $item;
+            $iopts = $opts;
+            if (is_array($item) && isset($item['opts']) && is_array($item['opts'])) {
+                $iopts = $item['opts'] + $opts;
+            }
+            try {
+                $out[$key] = ['ok' => true, 'result' => self::process((string)$path, $iopts)];
+            } catch (InfectedFileException $e) {
+                $out[$key] = ['ok' => false, 'blocked' => true, 'reason' => $e->getMessage(), 'report' => $e->report];
+            }
+        }
+        return $out;
+    }
+
     public static function process(string $inPath, array $opts = []): GuardResult
     {
         $bin = self::resolveBinary();

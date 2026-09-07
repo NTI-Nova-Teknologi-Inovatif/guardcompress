@@ -42,6 +42,45 @@ func withDefault(opts map[string]any, key string, val any) map[string]any {
 	return out
 }
 
+// BatchItem: satu input dalam batch (Opts boleh nil = pakai bersama).
+type BatchItem struct {
+	Path string
+	Opts map[string]any
+}
+
+// BatchResult: hasil per input. Err==nil artinya ok; ErrBlocked menandai ditolak.
+type BatchResult struct {
+	Path   string
+	Report map[string]any
+	Err    error
+}
+
+// IsBlocked: true bila file ditolak scanner (bukan error teknis).
+func (b BatchResult) IsBlocked() bool {
+	return b.Err != nil && len(b.Err.Error()) >= 7 && b.Err.Error()[:7] == "blocked"
+}
+
+// Batch: multi-input beda jenis sekaligus. File ditolak terkumpul per item,
+// error teknis (binary hilang) menghentikan langsung (fail-fast).
+func Batch(items []BatchItem, opts map[string]any) []BatchResult {
+	out := make([]BatchResult, 0, len(items))
+	for _, it := range items {
+		merged := map[string]any{}
+		for k, v := range opts {
+			merged[k] = v
+		}
+		for k, v := range it.Opts {
+			merged[k] = v
+		}
+		r, err := Process(it.Path, merged)
+		out = append(out, BatchResult{Path: r.Path, Report: r.Report, Err: err})
+		if err != nil && !out[len(out)-1].IsBlocked() {
+			break // error teknis: berhenti, jangan lanjutkan batch
+		}
+	}
+	return out
+}
+
 // Process memanggil binary core. Set GUARDCOMPRESS_BIN atau taruh binary di core/bin.
 func Process(inPath string, opts map[string]any) (Result, error) {
 	bin := os.Getenv("GUARDCOMPRESS_BIN")

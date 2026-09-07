@@ -63,4 +63,13 @@ yang jelas, bukan blocked.
 Preset siap pakai (satu sistem di belakangnya, argumen user menang):
 `GuardCompress::image($p)` / `::video($p)` / `::audio($p)` (PHP),
 `gc.image/video/audio` (Node), `image()/video()/audio()` (Python & Go).
-Batch = loop biasa + kumpulkan hasil (lihat `examples/`).
+
+Batch multi-input beda jenis sekaligus (form ada field PNG + video):
+```php
+$h = GuardCompress::batch(['avatar' => $p1, 'klip' => ['path' => $p2, 'opts' => ['allow_ext' => ['mp4']]]]);
+// $h['avatar'] = ['ok'=>true,'result'=>...], $h['klip'] = ['ok'=>false,'blocked'=>true,...]
+```
+(Node: `gc.batch({...})`, Python: `batch({...})`, Go: `Batch([]BatchItem{...})`.)
+File ditolak terkumpul per item (tidak melempar); error teknis tetap
+melempar langsung. Aturan per item bisa beda (preset/opts sendiri) atau
+digabung dalam satu panggilan.

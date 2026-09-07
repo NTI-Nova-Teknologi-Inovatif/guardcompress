@@ -46,4 +46,20 @@ module.exports = { process: processFile, processFile, resolveBinary,
   image: (p, o = {}) => processFile(p, { allow_ext: ['jpg', 'jpeg', 'png', 'webp', 'gif'], ...o }),
   video: (p, o = {}) => processFile(p, { allow_ext: ['mp4', 'mov', 'webm', 'mkv', 'avi'], ...o }),
   audio: (p, o = {}) => processFile(p, { allow_ext: ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'flac'], ...o }),
+  // Batch multi-input beda jenis: {avatar:'/tmp/a.png', video:'/tmp/b.mp4'}
+  // atau [{path, opts}]. File ditolak terkumpul (ok:false), error teknis lempar.
+  batch: (items, opts = {}) => {
+    const list = Array.isArray(items) ? items : Object.entries(items).map(([k, v]) => ({ key: k, ...(typeof v === 'string' ? { path: v } : v) }));
+    const out = Array.isArray(items) ? [] : {};
+    for (const it of list) {
+      const k = it.key !== undefined ? it.key : out.length;
+      try {
+        out[k] = { ok: true, ...processFile(it.path, { ...opts, ...(it.opts || {}) }) };
+      } catch (e) {
+        if (e.code === 'BLOCKED') out[k] = { ok: false, blocked: true, reason: e.message, report: e.report };
+        else throw e;
+      }
+    }
+    return out;
+  },
 };

@@ -64,3 +64,29 @@ def video(in_path: str, opts: dict | None = None) -> dict:
 
 def audio(in_path: str, opts: dict | None = None) -> dict:
     return process(in_path, {"allow_ext": ["mp3", "wav", "ogg", "oga", "m4a", "flac"], **(opts or {})})
+
+
+def batch(items, opts: dict | None = None) -> dict | list:
+    """Batch multi-input beda jenis sekaligus.
+    items: {"avatar": path, "video": path} atau [{"path":..., "opts":...}].
+    File ditolak terkumpul (ok False); error teknis tetap raise.
+    """
+    opts = opts or {}
+    if isinstance(items, dict):
+        entries = [(k, ({"path": v} if isinstance(v, str) else v)) for k, v in items.items()]
+        out: dict | list = {}
+    else:
+        entries = [(i, ({"path": v} if isinstance(v, str) else v)) for i, v in enumerate(items)]
+        out = []
+    for key, it in entries:
+        merged = {**opts, **(it.get("opts") or {})}
+        try:
+            r = process(it["path"], merged)
+            val = {"ok": True, **r}
+        except BlockedError as e:
+            val = {"ok": False, "blocked": True, "reason": str(e), "report": e.report}
+        if isinstance(out, dict):
+            out[key] = val
+        else:
+            out.append(val)
+    return out
