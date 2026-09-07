@@ -17,12 +17,15 @@ node server.js
 
 ## File uji (`web/test-files/`, lokal saja, tidak ikut commit)
 
-- `asli.png` — foto asli -> harus BERSIH.
-- File beracun dibuat lalu **dimakan Windows Defender duluan** (terbukti
-  dari log Threat-nya: pola kita memang dikenali sebagai webshell).
-  Supaya bisa uji penolakan tools kita di laptop ini, kecualikan dulu
-  foldernya (butuh admin): Windows Security -> Virus & threat protection
-  -> Manage settings -> Exclusions -> Add -> Folder ->
-  `C:\tools\GuardCompress\web\test-files`. Habis itu bikin file beracunnya,
-  drop di web, harusnya DITOLAK. Di server (tanpa AV) tidak perlu ini.
+- `asli.png` — foto asli (440KB) -> harus BERSIH.
+- `sisipan.png` — foto yang sama + webshell `<?php...` di ekor file
+  -> harus DITOLAK. Drop keduanya di web buat bandingkan.
+
+Catatan: kalau bikin file beracun sendiri lalu filenya hilang misterius,
+itu Windows Defender laptop yang makan duluan (bisa dicek di log
+Threat history-nya) — bukan tools kita. Mau uji pola klasik seperti
+`system($_GET...)` di laptop ini, kecualikan dulu foldernya (butuh admin):
+Windows Security -> Virus & threat protection -> Manage settings ->
+Exclusions -> Add -> Folder -> `C:\tools\GuardCompress\web\test-files`.
+Di server (tanpa AV) tidak perlu ini.
 
