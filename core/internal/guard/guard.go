@@ -24,14 +24,98 @@ type Result struct {
 
 var extByMime = map[string]string{
 	"video/mp4": ".mp4", "video/webm": ".webm", "video/x-matroska": ".mkv",
-	"audio/mpeg": ".mp3", "audio/wav": ".wav", "audio/ogg": ".ogg",
+	"video/avi":  ".avi",
+	"audio/mpeg": ".mp3", "audio/wav": ".wav", "audio/wave": ".wav",
+	"audio/ogg": ".ogg", "application/ogg": ".ogg",
+	"audio/mp4": ".m4a", "audio/flac": ".flac",
 	"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
+	"image/gif": ".gif",
 }
 
 var defaultAllow = []string{
-	"video/mp4", "video/webm", "video/x-matroska",
-	"audio/mpeg", "audio/wav", "audio/ogg",
-	"image/jpeg", "image/png", "image/webp",
+	"video/mp4", "video/webm",
+	"audio/mpeg", "audio/wav", "audio/wave", "audio/ogg", "application/ogg",
+	"image/jpeg", "image/png", "image/webp", "image/gif",
+}
+
+// outExtByMime: extension OUTPUT (bisa beda dari input bila transcoding
+// antar container, misal wav besar -> mp3 hemat).
+var outExtByMime = map[string]string{
+	"audio/wav": ".mp3", "audio/wave": ".mp3", "audio/flac": ".mp3",
+}
+
+// OutExt: extension untuk file hasil (lihat outExtByMime, fallback extByMime).
+func OutExt(mime string) string {
+	if e, ok := outExtByMime[mime]; ok {
+		return e
+	}
+	return extFor(mime)
+}
+
+// extToMime: config ramah-developer `allow_ext: ["jpg","mp4"]`.
+// Kunci = extension familiar, nilai = MIME kanonis hasil sniffing.
+var extToMime = map[string][]string{
+	"jpg": {"image/jpeg"}, "jpeg": {"image/jpeg"},
+	"png": {"image/png"}, "webp": {"image/webp"}, "gif": {"image/gif"},
+	"mp4": {"video/mp4"}, "mov": {"video/mp4"}, // mov terdeteksi ftyp -> mp4
+	"webm": {"video/webm"}, "mkv": {"video/webm"}, // mkv terdeteksi EBML -> webm
+	"avi": {"video/avi"},
+	"mp3": {"audio/mpeg"},
+	"wav": {"audio/wave", "audio/wav"},
+	"ogg": {"application/ogg", "audio/ogg"},
+	"oga": {"application/ogg", "audio/ogg"},
+	"m4a": {"audio/mp4"}, "flac": {"audio/flac"},
+}
+
+// mimeAlias: ejaan ganda MIME yang dianggap sama saat allowlist.
+var mimeAlias = map[string]string{
+	"audio/wav": "audio/wave", "audio/wave": "audio/wav",
+	"audio/ogg": "application/ogg", "application/ogg": "audio/ogg",
+}
+
+func mimeAllowed(mime string, allow []string) bool {
+	for _, a := range allow {
+		if mime == a {
+			return true
+		}
+		if al, ok := mimeAlias[mime]; ok && al == a {
+			return true
+		}
+		if al, ok := mimeAlias[a]; ok && al == mime {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveAllow: allowlist efektif = `allow` (atau default) GABUNG `allow_ext`.
+// Extension tak dikenal = error developer (exit 1), bukan blocked.
+func resolveAllow(cfg map[string]any) ([]string, error) {
+	allow := defaultAllow
+	if raw, ok := cfg["allow"].([]any); ok && len(raw) > 0 {
+		allow = nil
+		for _, a := range raw {
+			if s, ok := a.(string); ok {
+				allow = append(allow, s)
+			}
+		}
+	} else if raw2, ok := cfg["allow"].([]string); ok && len(raw2) > 0 {
+		allow = raw2
+	}
+	if raw, ok := cfg["allow_ext"].([]any); ok {
+		for _, e := range raw {
+			s, ok := e.(string)
+			if !ok {
+				continue
+			}
+			m, ok := extToMime[strings.ToLower(strings.TrimPrefix(s, "."))]
+			if !ok {
+				return nil, fmt.Errorf("unknown allow_ext %q (valid: jpg jpeg png webp gif mp4 mov webm mkv avi mp3 wav ogg oga m4a flac)", s)
+			}
+			allow = append(allow, m...)
+		}
+	}
+	return allow, nil
 }
 
 // Token berbahaya: webshell / script polyglot yang sering ditempel di media.
@@ -158,25 +242,13 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		return res, nil
 	}
 
-	allow := defaultAllow
-	if raw, ok := cfg["allow"].([]any); ok && len(raw) > 0 {
-		allow = nil
-		for _, a := range raw {
-			if s, ok := a.(string); ok {
-				allow = append(allow, s)
-			}
-		}
-	} else if raw2, ok := cfg["allow"].([]string); ok && len(raw2) > 0 {
-		allow = raw2
+	// Allowlist fleksibel: `allow` (MIME) GABUNG `allow_ext` (extension
+	// familiar: ["jpg","mp4"]). Extension tak dikenal = error developer.
+	allow, err := resolveAllow(cfg)
+	if err != nil {
+		return res, err
 	}
-	allowed := false
-	for _, a := range allow {
-		if res.Mime == a {
-			allowed = true
-			break
-		}
-	}
-	if !allowed {
+	if !mimeAllowed(res.Mime, allow) {
 		res.Reason = "mime not allowed: " + res.Mime
 		return res, nil
 	}
@@ -210,12 +282,22 @@ func SniffFile(path string) (string, map[string]any) {
 		return "unknown", details
 	}
 	mime := http.DetectContentType(head[:min(n, 512)])
-	// Fix: MP4 kadang terdeteksi application/octet-stream oleh stdlib.
-	if (mime == "application/octet-stream" || mime == "video/mp4") && len(head) > 12 {
-		if string(head[4:8]) == "ftyp" {
+	// Fix: ftyp dengan brand mayor yang dikenal.
+	// Video -> video/mp4, audio M4A/M4B -> audio/mp4 (bukan video!).
+	if mime == "application/octet-stream" && len(head) > 12 && string(head[4:8]) == "ftyp" {
+		brand := string(head[8:12])
+		switch brand {
+		case "M4A ", "M4B ":
+			mime = "audio/mp4"
+		case "isom", "iso2", "iso3", "iso4", "iso5", "iso6",
+			"mp41", "mp42", "M4V ", "M4P ", "MSNV", "avc1", "qt  ":
 			mime = "video/mp4"
 			details["ftyp_fix"] = true
 		}
+	}
+	// Fix: FLAC magic "fLaC".
+	if mime == "application/octet-stream" && len(head) > 4 && string(head[:4]) == "fLaC" {
+		mime = "audio/flac"
 	}
 	// Fix: WebM = EBML header 0x1A45DFA3
 	if mime == "application/octet-stream" && len(head) > 4 &&

@@ -195,3 +195,56 @@ func TestTopType(t *testing.T) {
 		t.Fatal("TopType salah")
 	}
 }
+
+func TestAllowExt(t *testing.T) {
+	png := writeTmp(t, "a.png", append([]byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}, 0, 0))
+	// extension familiar membuka izin tanpa tulis MIME
+	r, err := Scan(png, map[string]any{"allow_ext": []any{"jpg", "png"}})
+	if err != nil || !r.Allowed {
+		t.Fatalf("harusnya allowed via allow_ext, err=%v r=%+v", err, r)
+	}
+	// allow sempit + allow_ext gabungan (union)
+	r, _ = Scan(png, map[string]any{"allow": []any{"video/mp4"}, "allow_ext": []any{"png"}})
+	if !r.Allowed {
+		t.Fatal("harusnya allowed via union allow+allow_ext")
+	}
+	// extension ngawur = error developer (bukan blocked)
+	_, err = Scan(png, map[string]any{"allow_ext": []any{"exe"}})
+	if err == nil {
+		t.Fatal("allow_ext ngawur harusnya error")
+	}
+}
+
+func TestAliasWavOgg(t *testing.T) {
+	// ejaan ganda MIME dianggap sama
+	wav := writeTmp(t, "a.wav", append([]byte{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E'}, 0))
+	r, _ := Scan(wav, map[string]any{"allow": []any{"audio/wav"}})
+	if r.Mime != "audio/wave" {
+		t.Fatalf("wav harus terdeteksi audio/wave, dapat %q", r.Mime)
+	}
+	if !r.Allowed {
+		t.Fatalf("audio/wav harus mengizinkan audio/wave: %+v", r)
+	}
+}
+
+func TestFtypBrandM4A(t *testing.T) {
+	// M4A bukan video! brand mayor menentukan keluarga.
+	m4a := writeTmp(t, "a.m4a", append([]byte{0, 0, 0, 28, 'f', 't', 'y', 'p', 'M', '4', 'A', ' ', 0}, 0))
+	r, _ := Scan(m4a, map[string]any{"allow_ext": []any{"m4a"}})
+	if r.Mime != "audio/mp4" {
+		t.Fatalf("m4a harus audio/mp4, dapat %q", r.Mime)
+	}
+	if !r.Allowed {
+		t.Fatalf("harusnya allowed: %+v", r)
+	}
+}
+
+func TestOutExtTranscode(t *testing.T) {
+	if OutExt("audio/wave") != ".mp3" || OutExt("audio/flac") != ".mp3" ||
+		OutExt("video/mp4") != ".mp4" || OutExt("image/gif") != ".gif" {
+		t.Fatal("OutExt salah")
+	}
+	if got := OutputName("/tmp/rekaman.WAV", "audio/wave", map[string]any{}); got != "rekaman.mp3" {
+		t.Fatalf("wav harus jadi mp3: %q", got)
+	}
+}

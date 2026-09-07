@@ -37,3 +37,24 @@ Opsional (baca bila dipakai, abaikan bila tidak — tidak pernah error):
 Pengecualian satu-satunya yang BERSUARA: binary core tidak ketemu
 (`GUARDCOMPRESS_BIN` / installer) — ini fail-closed yang disengaja agar
 aplikasi tidak jalan tanpa perlindungan secara diam-diam.
+
+## 4. Format yang didukung + config web
+
+Di web, developer cukup atur **extension familiar** — tools menerima semua
+file yang bisa diperkecil:
+
+```php
+GuardCompress::process($file, ['allow_ext' => ['jpg','png','gif','mp4','mp3']]);
+```
+
+| Extension web | Terdeteksi (magic) | Output |
+|---|---|---|
+| `jpg jpeg png webp gif` | image/* | diperkecil (gif tetap animasi) |
+| `mp4 mov webm mkv avi` | video/* (mov/mkv via ftyp/EBML) | H.264 + faststart |
+| `mp3 wav ogg oga m4a flac` | audio/* (brand ftyp M4A, magic fLaC) | mp3 / ogg / m4a hemat |
+| lain (default) | — | **ditolak** (`mime not allowed`) |
+
+Catatan: `wav/flac` besar otomatis jadi `mp3`; `mkv` keluar sebagai `.webm`
+(keluarga EBML sama, ramah browser); `M4A` tidak pernah dianggap video
+(brand ftyp dibedakan). `allow` (MIME) dan `allow_ext` digabung (union);
+extension tak dikenal = error developer yang jelas, bukan blocked.

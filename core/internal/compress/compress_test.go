@@ -66,6 +66,38 @@ func TestImageCompressReal(t *testing.T) {
 	t.Logf("image compressed OK: %d bytes", res.NewBytes)
 }
 
+// TestGifCompressReal: filter palet 1-pass harus valid (pernah salah sintaks).
+func TestGifCompressReal(t *testing.T) {
+	if FindFFmpeg() == "" {
+		t.Skip("butuh ffmpeg")
+	}
+	ff := FindFFmpeg()
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "a.gif")
+	gen := exec.Command(ff, "-y", "-v", "error",
+		"-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=10",
+		"-frames:v", "10", src)
+	if out, err := gen.CombinedOutput(); err != nil {
+		t.Fatalf("gagal bikin sample gif: %v\n%s", err, out)
+	}
+	out := filepath.Join(tmp, "o.gif")
+	res, err := Run(src, out, "image/gif", map[string]any{})
+	if err != nil {
+		t.Fatalf("Run gif gagal: %v", err)
+	}
+	if res.Details["mode"] != "ffmpeg" {
+		t.Fatalf("harusnya mode=ffmpeg, dapat %v", res.Details["mode"])
+	}
+	// output harus valid gif
+	head := make([]byte, 6)
+	f, _ := os.Open(out)
+	_, _ = f.Read(head)
+	f.Close()
+	if string(head) != "GIF89a" && string(head) != "GIF87a" {
+		t.Fatalf("output bukan gif valid: %q", head)
+	}
+}
+
 func TestInvalidConfigRejected(t *testing.T) {
 	// AUDIT: nilai config liar harus ditolak tegas sebelum ffmpeg dipanggil.
 	// Paksa mode copy (ffmpeg absen mustahil di sini) — validasi jalan duluan

@@ -41,7 +41,7 @@ func OutputName(inPath, mime string, cfg map[string]any) string {
 	if stem == "" {
 		stem = "file"
 	}
-	return stem + extFor(mime)
+	return stem + OutExt(mime)
 }
 
 // Sanitize: hanya huruf, angka, "-", "_". Selainnya jadi "_".

@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $r = GuardCompress::process($up['tmp_name'], [
             'max_mb' => 50,
-            'allow' => ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'audio/mpeg'],
+            'allow_ext' => ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'mp3'],
         ]);
         $destDir = __DIR__ . '/uploads';
         if (!is_dir($destDir)) mkdir($destDir, 0755, true);

@@ -82,9 +82,17 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 			"-movflags", "+faststart", "-pix_fmt", "yuv420p",
 			"-acodec", "aac", "-b:a", abitrate,
 			outPath}
-	case len(mime) >= 5 && mime[:5] == "audio":
-		args = []string{"-y", "-i", inPath, "-codec:a", "libmp3lame", "-b:a", abitrate, outPath}
-	case mime == "image/jpeg" || mime == "image/png" || mime == "image/webp":
+	case len(mime) >= 5 && mime[:5] == "audio" || mime == "application/ogg":
+		// Codec per format input; output ext diatur guard.OutExt
+		// (wav/flac besar -> mp3 hemat; ogg -> ogg; m4a -> m4a).
+		acodec := "libmp3lame"
+		if mime == "application/ogg" || mime == "audio/ogg" {
+			acodec = "libvorbis"
+		} else if mime == "audio/mp4" {
+			acodec = "aac"
+		}
+		args = []string{"-y", "-i", inPath, "-codec:a", acodec, "-b:a", abitrate, outPath}
+	case mime == "image/jpeg" || mime == "image/png" || mime == "image/webp" || mime == "image/gif":
 		maxDim := "1920"
 		if v, ok := cfg["image_max_dim"]; ok {
 			maxDim = fmt.Sprintf("%v", v)
@@ -109,6 +117,12 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 			args = []string{"-y", "-i", inPath,
 				"-vf", "scale=w='min(" + maxDim + ",iw)':h='-2'",
 				"-compression_level", "9",
+				outPath}
+		}
+		if mime == "image/gif" {
+			// GIF: downscale + palet optimal 1-pass (tetap animasi).
+			args = []string{"-y", "-i", inPath,
+				"-vf", "scale=w='min(" + maxDim + ",iw)':h=-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse",
 				outPath}
 		}
 	default: // mime tak dikenal (tak lolos guard normal): copy aman
