@@ -26,7 +26,7 @@ terdeteksi saat verify berkala (cron/queue).
 ## 2b. Struktur output (gampang dicek manual)
 ```
 <out-dir>/
-  video_liburan_anak.mp4   # nama ikut file asli, disanitasi; ext SELALU dari MIME asli
+  video_liburan_anak.mp4   # nama ikut file asli, disanitasi; ext selalu dari MIME asli
   report.json              # laporan pretty-print (ada juga saat blocked, tanpa file media)
 ```
 Opsi penamaan via `--config {"output": ...}`:
@@ -45,20 +45,20 @@ Contoh: `evil.mp4.php` -> `evil_mp4_php.mp4`, `../../etc/passwd` -> `passwd.bin`
 
 ## 5. Keamanan
 - Jangan percaya extension; pakai magic numbers.
-- `escapeshellarg` / arg array (tanpa shell) di semua wrapper.
-- Timeout berlapis: ffmpeg core 100s < wrapper 120s (core selalu yang menuai ffmpeg).
+- Tanpa shell di semua wrapper (`proc_open` array / arg array).
+- Timeout berlapis: ffmpeg core 100s < wrapper 120s (biar core yang menuai ffmpeg).
   File besar naikkan via `timeoutSec` + pindah ke queue (lihat `examples/`).
 - Hapus tmp `in/out` setelah selesai; jangan log isi file.
-- AUDIT: report JSON berisi path server (`in_path`, `ffmpeg`) — jangan kirim
+- Report JSON berisi path server (`in_path`, `ffmpeg`) — jangan kirim
   mentah ke browser, kirim ringkasannya saja (`stored_at`, ukuran).
-- AUDIT: symlink input ditolak; ukuran input dicek ulang setelah scan (TOCTOU).
-- AUDIT: output yang sama dengan input ditolak (anti overwrite diri via CLI).
-- AUDIT: config angka divalidasi (crf 0-51, bitrate `^\d+k$`, max_dim, quality).
-- AUDIT: tmp PHP pakai `random_bytes`, folder 0700.
-- Risiko sisa (diterima sadar): lirik MP3 berisi kata "eval(" ikut diblokir
-  (fail-closed); CHECKSUMS rilis hanya dilindungi TLS (roadmap: cosign);
-  orphan ffmpeg bila WRAPPER di-kill paksa di Windows (core-kill aman via
-  timeout; Linux aman via Pdeathsig).
+- Symlink input ditolak; ukuran + mtime dicek ulang setelah scan (TOCTOU).
+- Output yang sama dengan input ditolak (biar CLI nggak overwrite diri sendiri).
+- Config angka divalidasi (crf 0-51, bitrate `^\d+k$`, max_dim, quality).
+- Tmp PHP pakai `random_bytes`, folder 0700.
+- Yang belum ke-cover (catat): lirik MP3 berisi kata "eval(" ikut diblokir
+  (fail-closed, nggak apa); CHECKSUMS rilis baru dilindungi TLS (mau cosign
+  nanti); orphan ffmpeg kalau WRAPPER yang di-kill paksa di Windows
+  (kalau core yang timeout aman; Linux aman via Pdeathsig).
 
 ## 6. Anti-down (server tidak boleh tumbang)
 

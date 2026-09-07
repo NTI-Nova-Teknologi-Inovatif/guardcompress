@@ -1,10 +1,10 @@
-// Package compress: Compress Phase - bungkus FFmpeg static.
-// Strategi zero-install: cari ffmpeg dengan urutan:
-//  1. env GUARDCOMPRESS_FFMPEG (di-set wrapper, hasil lazy-download + SHA verify)
-//  2. ./ffmpeg(.exe) di sebelah binary core
-//  3. ffmpeg di PATH (fallback kalau admin memang sudah install)
+// Package compress: fase kompres — bungkus ffmpeg static.
+// Cari ffmpeg dengan urutan:
+//  1. env GUARDCOMPRESS_FFMPEG (diisi installer dari hasil download + cek SHA)
+//  2. ffmpeg(.exe) sebelah binary core
+//  3. ffmpeg di PATH (kalau admin emang udah install)
 //
-// Kalau ffmpeg tidak ketemu: fallback copy file (guard-only mode) agar tidak gagal total.
+// Kalau nggak ketemu semua: fallback copy file (mode guard-only) biar nggak gagal total.
 package compress
 
 import (
@@ -70,8 +70,8 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		return res, nil
 	}
 
-	// EFISIENSI: file di bawah ambang tak perlu dibayar ongkos spawn ffmpeg
-	// (~0.5-1 dtk/proses). Default 0 = selalu kompres (perilaku lama).
+	// File di bawah ambang nggak usah bayar ongkos spawn ffmpeg.
+	// Default 0 = selalu kompres (perilaku lama).
 	// Rekomendasi situs avatar: 100 (file <100KB langsung copy).
 	if kb := minCompressKB(cfg); kb > 0 {
 		if fi, err := os.Stat(inPath); err == nil && fi.Size() < int64(kb)*1024 {
@@ -90,9 +90,9 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	if v, ok := cfg["video_crf"]; ok {
 		crf = fmt.Sprintf("%v", v)
 	}
-	// AUDIT: validasi angka config (fail-closed dengan pesan jelas, bukan
-	// error ffmpeg misterius; nilai liar tak bisa mengubah bentuk perintah
-	// karena argv tanpa shell, tapi tetap ditolak tegas).
+	// Validasi angka config biar errornya jelas di awal, bukan error
+	// ffmpeg yang misterius. Injeksi shell mustahil (argv tanpa shell),
+	// tapi nilai ngawur tetap ditolak.
 	if n, err := strconv.Atoi(crf); err != nil || n < 0 || n > 51 {
 		return res, fmt.Errorf("invalid video_crf (0-51): %v", cfg["video_crf"])
 	}
@@ -167,7 +167,7 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	ctx, cancel := ctxTimeout(cfg)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, ff, args...)
-	// AUDIT: di Linux, ffmpeg ikut mati bila core mati mendadak.
+	// Di Linux, ffmpeg ikut mati kalau core mati mendadak.
 	// (lihat procattr_linux.go; no-op di OS lain)
 	setDeathsig(cmd)
 	out, err := cmd.CombinedOutput()
@@ -180,7 +180,7 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	if err != nil {
 		return res, err
 	}
-	// AUDIT: output 0 byte = hasil korup, jangan pernah dianggap sukses.
+	// Output 0 byte = hasil korup, jangan dianggap sukses.
 	if fi.Size() == 0 {
 		os.Remove(outPath)
 		return res, fmt.Errorf("ffmpeg produced empty output")
@@ -356,8 +356,8 @@ func isImageMime(mime string) bool {
 
 // imageCodecArgs: argumen ffmpeg untuk keluarga codec gambar (1 code path
 // dipakai output utama + thumbs agar konsisten).
-// CATATAN: string filter GIF dipertahankan byte-identik dengan versi yang
-// terbukti lolos TestGifCompressReal (h tanpa kutip sebelum :flags).
+// String filter GIF jangan diubah-ubah: sudah pas dengan yang lolos uji
+// (h tanpa kutip sebelum :flags).
 func imageCodecArgs(mime, dim, q string) []string {
 	switch mime {
 	case "image/png":

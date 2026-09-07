@@ -1,6 +1,6 @@
-// Package guard: Guard Phase - validasi format + scan malware ringan.
-// v1: magic numbers (stdlib) + ftyp MP4 fix + heuristic webshell/polyglot.
-// v2 roadmap: yara-x binding + rules/ via go:embed.
+// Package guard: fase cek — validasi format + scan ringan.
+// Sekarang: magic numbers stdlib + betulin deteksi MP4 + heuristic webshell.
+// Nanti (v2): yara-x beneran + rules/ diembed.
 package guard
 
 import (
@@ -181,8 +181,8 @@ func (r Result) SafeExt() string {
 
 func Scan(path string, cfg map[string]any) (Result, error) {
 	res := Result{Details: map[string]any{}}
-	// AUDIT: tolak symlink agar pemindaian tidak bisa diarahkan baca file
-	// sembarang milik server (defense-in-depth; path normalnya tmp acak).
+	// Tolak symlink: jangan sampai scan diarahkan baca file lain milik server.
+	// (path normalnya tmp acak, tapi tetap dicek.)
 	if li, err := os.Lstat(path); err != nil {
 		return res, err
 	} else if li.Mode()&os.ModeSymlink != 0 {
@@ -197,8 +197,8 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 	res.Size = fi.Size()
 	res.ModNano = fi.ModTime().UnixNano()
 
-	// AUDIT: tolak Windows ADS ("file.png:evil") — stream alternatif bisa
-	// menyembunyikan konten dari pemindaian / penulisan biasa.
+	// Tolak Windows ADS ("file.png:evil"): stream alternatif bisa
+	// menyembunyikan konten dari scan maupun dari penulisan biasa.
 	if runtime.GOOS == "windows" {
 		rest := path
 		if len(rest) > 2 && rest[1] == ':' {
@@ -251,9 +251,9 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		}
 	}
 
-	// Heuristic scan DULU (sebelum allowlist) agar alasan blokir presisi.
-	// AUDIT: streaming per-chunk 1MB + overlap (bukan head+tail) agar payload
-	// yang disembunyikan di TENGAH file besar tetap ketemu, memory konstan.
+	// Scan heuristic dulu sebelum allowlist biar alasan blokirnya pas.
+	// Streaming per-chunk 1MB + overlap, bukan head+tail, supaya payload
+	// yang ngumpet di TENGAH file gede tetap ketemu. Memory tetap kecil.
 	if reason, token := streamScan(f, res.Size); reason != "" {
 		res.Reason = reason
 		if token != "" {
@@ -285,7 +285,7 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		}
 	}
 
-	// Allowlist fleksibel: `allow` (MIME) GABUNG `allow_ext` (extension
+	// Allowlist fleksibel: `allow` (MIME) gabung `allow_ext` (extension
 	// familiar: ["jpg","mp4"]). Extension tak dikenal = error developer.
 	allow, err := resolveAllow(cfg)
 	if err != nil {

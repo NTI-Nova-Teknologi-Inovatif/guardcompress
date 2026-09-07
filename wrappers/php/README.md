@@ -2,8 +2,7 @@
 
 ```bash
 composer require guardcompress/php
-php vendor/bin/guardcompress-doctor  # (roadmap) atau:
-php bin/install-binary.php v0.1.0
+php bin/install-binary.php v0.1.0   # download binary yang cocok (sekali aja)
 ```
 
 ```php

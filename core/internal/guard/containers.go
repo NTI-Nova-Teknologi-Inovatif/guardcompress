@@ -7,11 +7,11 @@ import (
 	"os"
 )
 
-// Penjelasan: file media boleh berisi byte apa saja, tapi container
-// executable/arsip yang STRUKTURNYA VALID di dalamnya adalah pola
-// penyelundupan klasik (ZIP di ekor PNG, EXE ditempel di video).
-// Magic pendek ("PK") dicocokkan mentah akan false-positive di data acak,
-// jadi tiap temuan WAJIB lolos validasi struktur sebelum diblokir.
+// File media isinya boleh byte apa aja, tapi container executable/arsip
+// yang strukturnya VALID di dalamnya itu pola nyelundupin klasik
+// (zip di ekor PNG, exe ditempel di video).
+// Magic pendek kayak "PK" kalau dicocokkan mentah bakal false-positive di
+// data acak, makanya tiap temuan wajib lolos validasi struktur dulu.
 
 var (
 	sigZIPLocal   = []byte("PK\x03\x04")

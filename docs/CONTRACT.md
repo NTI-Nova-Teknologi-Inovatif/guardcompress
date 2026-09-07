@@ -1,6 +1,6 @@
 # KONTRAK SINYAL — untuk developer pemakai
 
-Prinsip: **sinyal tolak selalu eksplisit &Typed, fitur opsional selalu diam.**
+Prinsip: **penolakan selalu eksplisit dan bertipe, fitur opsional selalu diam.**
 
 ## 1. Sinyal penolakan (dari isolasi)
 
@@ -40,19 +40,19 @@ Pengecualian satu-satunya yang BERSUARA: binary core tidak ketemu
 (`GUARDCOMPRESS_BIN` / installer) — ini fail-closed yang disengaja agar
 aplikasi tidak jalan tanpa perlindungan secara diam-diam.
 
-## 5. Isolasi output antar-user (file tak nyasar)
+## 4. Isolasi output antar-user (file tak nyasar)
 
 - Tiap panggilan dapat folder tmp **unik acak** (`mkdtemp` / `random_bytes`),
   mode **0700** — user/OS lain tak bisa intip; nama file sama dari 2 user
   tak pernah tabrakan (beda folder).
-- Setelah sukses, app WAJIB pindahkan file ke storage milik user lalu
+- Setelah sukses, app wajib pindahkan file ke storage milik user lalu
   panggil `cleanup`: PHP `GuardCompress::cleanup()`, Node `gc.cleanup()`,
   Python `cleanup()`, Go `os.RemoveAll`. Gagal/ditolak dibersihkan otomatis.
 - Karantina bernama unik (`stem + timestamp nano`) — 2 file jahat nama
   sama tak saling timpa.
 - Jangan pernah expose `report` mentah (berisi path server) ke browser.
 
-## 4. Format yang didukung + config web
+## 5. Format yang didukung + config web
 
 Di web, developer cukup atur **extension familiar** — tools menerima semua
 file yang bisa diperkecil:
@@ -93,7 +93,7 @@ Paralelisme dua tingkat:
   CLI sendiri tanpa lock/antrean di tools kita. Batasnya hanya CPU untuk
   ffmpeg — video berat disarankan lewat queue (`examples/`).
 - **Dalam satu batch: sekuensial default, paralel bila diminta** via
-  `jobs`: PHP `batchParallel($items, ['jobs' => 4])`, Node
-  `batchAsync(items, {jobs})` (default CPU, maks 4), Python/Go
-  `batch(..., {"jobs": N})`. Urutan hasil selalu = urutan input.
-  Terbukti: 2 video jobs:2 = 2.8s vs sekuensial 3.8s (skala ikut inti CPU).
+   `jobs`: PHP `batchParallel($items, ['jobs' => 4])`, Node
+   `batchAsync(items, {jobs})` (default ikut CPU, maks 4), Python/Go
+   `batch(..., {"jobs": N})`. Urutan hasil selalu = urutan input.
+   Diukur di mesin 2-core: 2 video jobs:2 = 2.8s vs sekuensial 3.8s.

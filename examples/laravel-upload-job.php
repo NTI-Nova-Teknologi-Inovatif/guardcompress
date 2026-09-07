@@ -1,8 +1,8 @@
 <?php
-// Contoh Laravel Queue Job: upload besar jangan block request.
-// ANTI-DOWN: batasi worker (php artisan queue:work --sleep=3) dan jumlah
-// proses (Horizon maxProcesses = doctor.recommended_jobs). ffmpeg_threads
-// default 2/job agar 1 upload tak menelan semua core.
+// Contoh Laravel Queue Job: upload gede jangan di request, lempar ke queue.
+// Batasi worker-nya (queue:work --sleep=3, Horizon maxProcesses ikut
+// doctor.recommended_jobs). ffmpeg_threads default 2/job biar 1 upload
+// nggak ngabisin semua core.
 // php artisan make:job CompressUpload -> tempel isi handle() ini.
 namespace App\Jobs;
 

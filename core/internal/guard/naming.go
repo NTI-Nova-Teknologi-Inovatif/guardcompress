@@ -10,14 +10,14 @@ import (
 
 // OutputName: nama file output yang aman & fleksibel.
 //
-//	mode "original" (default): ikut nama file asli, disanitasi.
+//	mode "original" (default): ngikut nama file asli, disanitasi.
 //	  "video liburan anak.mp4" -> "video_liburan_anak.mp4"
 //	  "evil.mp4.php"           -> "evil_mp4_php.mp4" (ext selalu dari MIME asli!)
-//	mode "uuid":   nama acak 16 hex char ( misal "a3f9c1...mp4").
+//	mode "uuid":   nama acak 16 hex char (misal "a3f9c1...mp4").
 //	mode lain:     dianggap stem kustom, ikut disanitasi.
 //
-// Extension SELALU dari hasil sniff MIME (SafeExt), bukan dari nama input,
-// agar nama tidak bisa dipakai menyelundupkan ".php".
+// Extension selalu dari hasil sniff MIME, bukan dari nama input,
+// biar nama nggak bisa dipakai nyelundupin ".php".
 func OutputName(inPath, mime string, cfg map[string]any) string {
 	mode, _ := cfg["output"].(string)
 	var stem string

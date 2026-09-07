@@ -1,11 +1,10 @@
-// Package slots: semafor file lintas-proses (tanpa daemon, tanpa lock server).
-// Melindungi server dari N proses guardcompress yang jalan bareng
-// (100 user upload bersamaan): slot penuh -> tolak cepat "busy" (HTTP 429),
-// bukan terima semua lalu server tumbang.
+// Package slots: semafor file lintas-proses. Nggak butuh daemon,
+// nggak butuh lock server — cukup file + O_EXCL, jadi jalan di semua
+// bahasa/OS. Kalau slot penuh, tolak cepat "busy" (HTTP 429) daripada
+// terima semua terus server tumbang.
 //
-// Aman dipakai lintas bahasa/OS karena hanya butuh file + O_EXCL.
-// Batas lunak (race sempit bisa lolos 1-2 slot) — cukup untuk admission,
-// bukan batas keamanan keras.
+// Batasnya lunak: race sempit bisa lolos 1-2 slot. Cukup buat admission,
+// bukan buat batas keamanan keras.
 package slots
 
 import (

@@ -156,8 +156,8 @@ func Process(inPath string, opts map[string]any) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	// AUDIT: timeout wrapper (120s) harus > timeout ffmpeg core (100s)
-	// agar core yang selalu menuai ffmpeg, bukan wrapper.
+	// Timeout wrapper (120s) harus lebih besar dari timeout ffmpeg core (100s)
+	// supaya yang menuai ffmpeg selalu core, bukan wrapper.
 	timeout := 120 * time.Second
 	if v, ok := opts["timeoutSec"]; ok {
 		switch n := v.(type) {

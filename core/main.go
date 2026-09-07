@@ -1,8 +1,8 @@
-// Command guardcompress: single-binary CLI Core Engine.
-// Contract (STABLE):
+// Command guardcompress: inti CLI, jadi satu binary.
+// Kontrak CLI (jangan diubah sembarangan, wrapper ngandalin format ini):
 //
 //	guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]
-//	exit 0 = clean, exit 2 = blocked, exit 1 = error
+//	exit 0 = bersih, exit 2 = diblokir, exit 1 = error
 //	stdout (check --json) = report.json di baris terakhir
 package main
 
@@ -138,7 +138,7 @@ func runCheck() {
 		fail("cannot create out-dir: "+err.Error(), 1)
 	}
 
-	// BACKPRESSURE: rebut slot lintas-proses SEBELUM kerja berat.
+	// Rebut slot lintas-proses SEBELUM kerja berat (backpressure).
 	// Penuh -> tolak cepat busy (HTTP 429), bukan terima lalu server tumbang.
 	// Default = jumlah CPU; 0 = tanpa batas (server khusus media).
 	maxSlots := runtime.NumCPU()
@@ -179,8 +179,8 @@ func runCheck() {
 	}
 
 	outPath := filepath.Join(*outDir, guard.OutputName(*inPath, gres.Mime, cfg))
-	// AUDIT: tolak bila output = file input itu sendiri (CLI user bisa
-	// mengarah --out-dir ke folder input; ffmpeg -y akan menghancurkan input).
+	// Jangan sampai output = file input itu sendiri. User CLI bisa aja
+	// mengarah --out-dir ke folder input; ffmpeg -y bakal menghajar input.
 	if same, _ := samePathFile(*inPath, outPath); same {
 		fail("refusing: output path equals input (use a different --out-dir)", 1)
 	}
@@ -193,9 +193,9 @@ func runCheck() {
 	report.Thumbs = cres.Thumbs
 	report.Details["compress"] = cres.Details
 
-	// DETEKSI PERUBAHAN FORMAT: sniff ulang HASIL kompres, keluarganya harus
-	// sama dengan input yang lolos (video->video dst). ffmpeg yang "berubah
-	// pikiran" / file yang ditukar di tengah jalan langsung digagalkan.
+	// Sniff ulang HASIL kompres: keluarganya harus sama dengan input yang
+	// lolos (video->video dst). Kalau ffmpeg "berubah pikiran" atau file
+	// ditukar di tengah jalan, langsung digagalkan.
 	outMime, _ := guard.SniffFile(outPath)
 	report.Details["out_mime"] = outMime
 	if guard.TopType(outMime) != guard.TopType(gres.Mime) {

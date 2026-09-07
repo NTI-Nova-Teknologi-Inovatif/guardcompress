@@ -161,20 +161,20 @@ class GuardCompress
     public static function process(string $inPath, array $opts = []): GuardResult
     {
         $bin = self::resolveBinary();
-        // AUDIT: suffix acak kriptografis (bukan uniqid yang bisa ditebak)
-        // agar user lain tak bisa menebak & mengintip folder tmp.
+        // Suffix acak kriptografis. uniqid gampang ditebak, jangan dipakai
+        // buat nama folder tmp.
         try {
             $suffix = bin2hex(random_bytes(8));
         } catch (\Throwable) {
             $suffix = uniqid('', true);
         }
         $outDir = sys_get_temp_dir() . '/gc-' . $suffix;
-        // AUDIT: 0700 (bukan 0777) agar user lain di shared hosting tak bisa intip file.
+        // 0700, bukan 0777: user lain di shared hosting jangan bisa intip.
         if (!mkdir($outDir, 0700, true) && !is_dir($outDir)) {
             throw new \RuntimeException("cannot create tmp dir: $outDir");
         }
-        // AUDIT: proc_open array (tanpa shell) — escapeshellarg+exec rusak
-        // di Windows bila JSON berisi kutip (cmd.exe mengupasnya).
+        // proc_open array = tanpa shell. escapeshellarg+exec pecah di
+        // Windows kalau JSON-nya ada kutip (cmd.exe mengupasnya).
         if (!function_exists('proc_open')) {
             throw new \RuntimeException('proc_open() dibutuhkan GuardCompress');
         }
@@ -244,7 +244,7 @@ class GuardCompress
         $arch = str_contains($arch, 'arm') || str_contains($arch, 'aarch64') ? 'arm64' : 'amd64';
         $ext = $os === 'windows' ? '.exe' : '';
         $name = "guardcompress-{$os}-{$arch}{$ext}";
-        // AUDIT: HOME bisa kosong di PHP-FPM; coba getenv + USERPROFILE juga.
+        // HOME sering kosong di PHP-FPM, cek getenv + USERPROFILE juga.
         $home = $_SERVER['HOME'] ?? getenv('HOME') ?? getenv('USERPROFILE') ?: sys_get_temp_dir();
         foreach([
             "$home/.cache/guardcompress/$name",
