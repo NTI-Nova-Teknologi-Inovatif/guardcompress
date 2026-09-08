@@ -36,17 +36,18 @@ disimpan adalah hasil render ulang yang bersih.
 - **Karantina opsional + hook ClamAV** bila `clamdscan` tersedia di server.
 - **Nol dependensi** — core Go stdlib-only; semua wrapper stdlib-only.
 
-## Instalasi
+## Instalasi (via GitHub — registry segera)
 
-```bash
-composer require guardcompress/php        # PHP (Laravel/WordPress)
-npm install guardcompress                 # Node.js
-pip install guardcompress                 # Python
-go get github.com/guardcompress/guardcompress/wrappers/go   # Go
-```
+| Bahasa | Sekarang | Nanti |
+|---|---|---|
+| PHP | composer via VCS `NTI-Nova-Teknologi-Inovatif/guardcompress-php` | `composer require guardcompress/php` |
+| Node | `npm install NTI-Nova-Teknologi-Inovatif/guardcompress-js` | `npm install guardcompress` |
+| Python | `pip install git+https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git` | `pip install guardcompress` |
+| Go | `go get github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go` | sama (Go langsung dari GitHub) |
 
 Binary inti + FFmpeg diunduh otomatis saat instalasi (postinstall) dari
-GitHub Releases — cocok dengan OS/arch mesin. Atau override manual:
+GitHub Releases — cocok dengan OS/arch mesin. Belum ada rilis? Installer
+diam (mode guard-only), tidak menggagalkan install. Atau override manual:
 
 ```bash
 php bin/install-binary.php v0.1.0   # PHP, sekali saja
@@ -91,7 +92,7 @@ except BlockedError as e:
 
 ```go
 // Go net/http
-import gc "github.com/guardcompress/guardcompress/wrappers/go"
+import gc "github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go"
 res, err := gc.Process(tmpPath, map[string]any{"max_mb": 500})
 ```
 
@@ -121,7 +122,7 @@ wrappers/
   node/             # npm: guardcompress
   python/           # pip: guardcompress
   go/               # SDK go
-docs/               # ARCHITECTURE, CONFIG, CONTRACT, FFMPEG, RELEASE, FAQ, COMPARISON
+docs/               # ARCHITECTURE, CONFIG, CONTRACT, FFMPEG, RELEASE, FAQ, COMPARISON, GLOSSARY
 examples/           # contoh queue Laravel / BullMQ / Celery
 web/                # demo upload (contoh, bukan produksi)
 ```

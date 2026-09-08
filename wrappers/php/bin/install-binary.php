@@ -13,7 +13,7 @@ $arch = (stripos($arch, 'arm') !== false || stripos($arch, 'aarch64') !== false)
 $ext = $os === 'windows' ? '.exe' : '';
 $files = ["guardcompress-{$os}-{$arch}{$ext}", "ffmpeg-{$os}-{$arch}{$ext}"];
 
-$base = getenv('GUARDCOMPRESS_RELEASE_BASE') ?: "https://github.com/guardcompress/guardcompress/releases/download";
+$base = getenv('GUARDCOMPRESS_RELEASE_BASE') ?: "https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/releases/download";
 
 $home = $_SERVER['HOME'] ?? getenv('USERPROFILE') ?? sys_get_temp_dir();
 $destDir = "$home/.cache/guardcompress";

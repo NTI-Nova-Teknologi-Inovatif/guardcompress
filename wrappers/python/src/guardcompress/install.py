@@ -30,7 +30,7 @@ def main(version: str | None = None) -> int:
     version = version or os.environ.get("GUARDCOMPRESS_VERSION", "v0.1.0")
     base = os.environ.get(
         "GUARDCOMPRESS_RELEASE_BASE",
-        "https://github.com/guardcompress/guardcompress/releases/download",
+        "https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/releases/download",
     )
     plat, arch = _plat_arch()
     ext = ".exe" if plat == "windows" else ""

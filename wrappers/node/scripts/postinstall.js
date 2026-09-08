@@ -9,7 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const version = process.env.GUARDCOMPRESS_VERSION || 'v0.1.0';
-const base = process.env.GUARDCOMPRESS_RELEASE_BASE || 'https://github.com/guardcompress/guardcompress/releases/download';
+const base = process.env.GUARDCOMPRESS_RELEASE_BASE || 'https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/releases/download';
 const plat = process.platform === 'win32' ? 'windows' : process.platform;
 const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
 const ext = plat === 'windows' ? '.exe' : '';

@@ -1,15 +1,29 @@
 # GuardCompress for Node.js
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../../LICENSE)
-[![npm](https://img.shields.io/npm/v/guardcompress)](https://www.npmjs.com/package/guardcompress)
 
 Keamanan + kompresi upload untuk Express/Fastify/Nest. Thin wrapper di atas
 binary inti Go — tanpa dependensi npm.
 
+## Apa itu ini?
+
+- **Wrapper** = penerjemah: kode JS memanggil binary Go lewat `spawn`,
+  lalu menerjemahkan `report.json` jadi return/throw yang enak dipakai.
+- **Binary inti** = program Go (`guardcompress-*.exe`) yang berisi SEMUA
+  logika (scan + kompres). Satu file, tanpa install lain.
+- **FFmpeg** = mesin kompres video/gambar/audio, diunduh otomatis.
+
+## Instalasi (via GitHub — npm segera)
+
 ```bash
-npm install guardcompress
-# binary + ffmpeg otomatis terunduh saat install (postinstall)
+npm install NTI-Nova-Teknologi-Inovatif/guardcompress-js
+# binary + ffmpeg otomatis terunduh saat install (postinstall).
+# Belum ada rilis? installer diam — mode guard-only, tanpa gagalkan install.
 ```
+
+Nanti setelah publish: `npm install guardcompress`.
+
+## Pakai
 
 ```js
 const gc = require('guardcompress');
@@ -29,13 +43,13 @@ Shortcut per jenis: `gc.image(p, opts)`, `gc.video(p, opts)`, `gc.audio(p, opts)
 Batch: `gc.batch({avatar: p1, klip: {path: p2, opts}})` (sekuensial) atau
 `gc.batchAsync(items, { jobs: 4 })` (paralel, hasil urut = urutan input).
 
-Env:
+## Env
 
 | Var | Arti |
 |---|---|
 | `GUARDCOMPRESS_BIN` | path binary manual |
 | `GUARDCOMPRESS_VERSION` | versi binary (default `v0.1.0`) |
-| `GUARDCOMPRESS_RELEASE_BASE` | base URL rilis (default GitHub Releases) |
+| `GUARDCOMPRESS_RELEASE_BASE` | base URL rilis (default GitHub Releases org) |
 | `GUARDCOMPRESS_FFMPEG` | path ffmpeg manual |
 
 Detail kontrak, config, dan keamanan: repo utama

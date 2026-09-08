@@ -375,7 +375,7 @@ except BlockedError as e:
     return 422, str(e)`
 	case "go":
 		return `// Go net/http
-import gc "github.com/guardcompress/guardcompress/wrappers/go"
+import gc "github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go"
 res, err := gc.Process(tmpPath, map[string]any{"max_mb": 500})`
 	default:
 		return `<?php

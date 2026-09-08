@@ -1,9 +1,27 @@
-# GuardCompress PHP wrapper
+# GuardCompress for PHP
+
+Keamanan + kompresi upload untuk Laravel/WordPress. Thin wrapper di atas
+binary inti Go — tanpa dependensi composer.
+
+## Apa itu ini?
+
+- **Wrapper** = class PHP (`GuardCompress::process()`) yang memanggil
+  binary Go lewat `proc_open`, lalu menerjemahkan hasilnya jadi return
+  atau exception (`InfectedFileException` = 422, `BusyException` = 429).
+- **Binary inti** = program Go yang berisi SEMUA logika (scan + kompres).
+- **FFmpeg** = mesin kompres, diunduh otomatis oleh installer.
+
+## Instalasi (via GitHub — Packagist segera)
 
 ```bash
-composer require guardcompress/php
-php bin/install-binary.php v0.1.0   # download binary yang cocok (sekali aja)
+composer require guardcompress/php:dev-main \
+  --repository='{"type":"vcs","url":"https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-php"}'
+php bin/install-binary.php v0.1.0   # unduh binary yang cocok (sekali saja)
 ```
+
+Nanti setelah publish: `composer require guardcompress/php`.
+
+## Pakai
 
 ```php
 use GuardCompress\GuardCompress;
@@ -15,4 +33,12 @@ try {
 }
 ```
 
-Env: `GUARDCOMPRESS_BIN` (override path binary), `GUARDCOMPRESS_FFMPEG` (path ffmpeg static).
+Shortcut: `GuardCompress::image($p)`, `::video($p)`, `::audio($p)`.
+Batch: `GuardCompress::batch(['avatar' => $p1, 'klip' => ['path' => $p2]])`.
+
+Env: `GUARDCOMPRESS_BIN` (override path binary), `GUARDCOMPRESS_FFMPEG`
+(path ffmpeg static).
+
+Detail kontrak, config, dan keamanan: repo utama
+[guardcompress](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress).
+Lisensi MIT.
