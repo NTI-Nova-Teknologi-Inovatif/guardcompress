@@ -1,6 +1,4 @@
 'use strict';
-// Mini client milik folder web/ ini: ngomong langsung ke binary core.
-// Nggak require kode utama, cuma butuh env GUARDCOMPRESS_BIN.
 const { spawnSync } = require('child_process');
 const os = require('os');
 const path = require('path');

@@ -5,13 +5,8 @@ namespace GuardCompress;
 
 class GuardCompress
 {
-    // Satu sistem fleksibel: process() umum + preset per jenis.
-    // Contoh: GuardCompress::image($path)  // khusus jpg/png/gif/webp
-    //         GuardCompress::video($path, ['video_crf' => 30])
-    //         GuardCompress::audio($path)
     public static function image(string $inPath, array $opts = []): GuardResult
     {
-        // $opts menang bila user menimpa allow_ext sendiri.
         return self::process($inPath, $opts + ['allow_ext' => ['jpg', 'jpeg', 'png', 'webp', 'gif']]);
     }
 
@@ -25,13 +20,6 @@ class GuardCompress
         return self::process($inPath, $opts + ['allow_ext' => ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'flac']]);
     }
 
-    // Batch multi-input beda jenis sekaligus.
-    // $items: ['avatar' => '/tmp/a.png', 'video' => '/tmp/b.mp4'] atau
-    //         [['path' => ..., 'opts' => [...]], ...].
-    // Tak pernah lempar untuk file DITOLAK (terkumpul per item); error teknis
-    // (binary hilang) tetap dilempar langsung (fail-fast).
-    // Return: ['avatar' => ['ok' => true, 'result' => GuardResult],
-    //          'video'  => ['ok' => false, 'blocked' => true, 'reason' => ...]]
     public static function batch(array $items, array $opts = []): array
     {
         $out = [];
@@ -50,9 +38,6 @@ class GuardCompress
         return $out;
     }
 
-    // batchParallel: batch multi-input yang jalan BERSAMAAN (jobs proses,
-    // default 4, maks 16). Urutan hasil = urutan input. File ditolak
-    // terkumpul; error teknis melempar langsung. Butuh proc_open().
     public static function batchParallel(array $items, array $opts = []): array
     {
         if (!function_exists('proc_open')) {
@@ -63,7 +48,7 @@ class GuardCompress
         unset($opts['jobs']);
         $keys = array_keys($items);
         $out = [];
-        $running = []; // idx => ['proc'=>, 'pipes'=>, 'outDir'=>, 'buf'=>]
+        $running = [];
         $next = 0;
         $n = count($keys);
         $startOne = function ($idx, $item) use ($bin, $opts, &$running) {
@@ -139,7 +124,6 @@ class GuardCompress
             foreach (array_keys($running) as $idx) {
                 $st = proc_get_status($running[$idx]['proc']);
                 if (!$st['running']) {
-                    // Kuras sisa output lalu selesaikan.
                     $s = $running[$idx]['pipes'][1];
                     while (($chunk = fread($s, 8192)) !== false && $chunk !== '') {
                         $running[$idx]['buf'] .= $chunk;
@@ -150,7 +134,6 @@ class GuardCompress
                 }
             }
         }
-        // Kembalikan urutan input.
         $ordered = [];
         foreach ($keys as $key) {
             $ordered[$key] = $out[$key];
@@ -161,20 +144,15 @@ class GuardCompress
     public static function process(string $inPath, array $opts = []): GuardResult
     {
         $bin = self::resolveBinary();
-        // Suffix acak kriptografis. uniqid gampang ditebak, jangan dipakai
-        // buat nama folder tmp.
         try {
             $suffix = bin2hex(random_bytes(8));
         } catch (\Throwable) {
             $suffix = uniqid('', true);
         }
         $outDir = sys_get_temp_dir() . '/gc-' . $suffix;
-        // 0700, bukan 0777: user lain di shared hosting jangan bisa intip.
         if (!mkdir($outDir, 0700, true) && !is_dir($outDir)) {
             throw new \RuntimeException("cannot create tmp dir: $outDir");
         }
-        // proc_open array = tanpa shell. escapeshellarg+exec pecah di
-        // Windows kalau JSON-nya ada kutip (cmd.exe mengupasnya).
         if (!function_exists('proc_open')) {
             throw new \RuntimeException('proc_open() dibutuhkan GuardCompress');
         }
@@ -193,16 +171,14 @@ class GuardCompress
         fclose($pipes[2]);
         $code = proc_close($proc);
 
-        // Ambil baris JSON terakhir (abaikan log lain)
         $json = trim((string)$stdout);
         $last = substr($json, strrpos($json, "\n") === false ? 0 : strrpos($json, "\n") + 1);
         $report = json_decode($last, true) ?? ['reason' => $json];
 
         if ($code === 2) {
-            self::rmDir($outDir); // file kotor: buang output
+            self::rmDir($outDir);
             throw new InfectedFileException($report['reason'] ?? 'blocked', $report);
         }
-        // Sinyal busy (backpressure): server penuh, minta retry (HTTP 429).
         if (!empty($report['details']['busy'])) {
             self::rmDir($outDir);
             throw new BusyException($report['reason'] ?? 'server busy', $report);
@@ -237,21 +213,18 @@ class GuardCompress
 
     public static function resolveBinary(): string
     {
-        // 1. env override, 2. cache dir, 3. vendor/bin fallback
         if ($env = getenv('GUARDCOMPRESS_BIN')) return $env;
-        $os = strtolower(PHP_OS_FAMILY); // linux, windows, darwin
+        $os = strtolower(PHP_OS_FAMILY);
         $arch = php_uname('m');
         $arch = str_contains($arch, 'arm') || str_contains($arch, 'aarch64') ? 'arm64' : 'amd64';
         $ext = $os === 'windows' ? '.exe' : '';
         $name = "guardcompress-{$os}-{$arch}{$ext}";
-        // HOME sering kosong di PHP-FPM, cek getenv + USERPROFILE juga.
         $home = $_SERVER['HOME'] ?? getenv('HOME') ?? getenv('USERPROFILE') ?: sys_get_temp_dir();
         foreach([
             "$home/.cache/guardcompress/$name",
             __DIR__ . "/../../core/bin/$name",
             __DIR__ . "/../../bin/$name",
         ] as $p) { if (is_file($p)) return $p; }
-        // belum di-download -> arahkan ke installer
         throw new \RuntimeException(
             "guardcompress binary not found ($name). Run: php bin/install-binary.php"
         );

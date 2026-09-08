@@ -1,10 +1,4 @@
 'use strict';
-// Server contoh uji GuardCompress. Node stdlib doang, tanpa npm install.
-// Jalankan:  GUARDCOMPRESS_BIN=... node server.js   (dari folder web/)
-// Buka: http://localhost:8080 — drop file, hasil langsung muncul.
-//
-// Frontend kirim body mentah (fetch file langsung, bukan multipart),
-// jadi server nggak butuh parser apa-apa.
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
@@ -53,7 +47,6 @@ const server = http.createServer((req, res) => {
     ws.on('error', () => { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ status: 'error', reason: 'gagal nampung upload' })); });
     return;
   }
-  // File statis: / -> public/index.html, /uploads/* -> hasil bersih.
   let f = req.url === '/' ? '/public/index.html' : decodeURIComponent(req.url.split('?')[0]);
   if (f.includes('..')) { res.writeHead(400); res.end('bad path'); return; }
   const full = path.join(ROOT, f);

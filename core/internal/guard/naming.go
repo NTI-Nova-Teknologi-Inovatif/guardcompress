@@ -8,16 +8,6 @@ import (
 	"unicode"
 )
 
-// OutputName: nama file output yang aman & fleksibel.
-//
-//	mode "original" (default): ngikut nama file asli, disanitasi.
-//	  "video liburan anak.mp4" -> "video_liburan_anak.mp4"
-//	  "evil.mp4.php"           -> "evil_mp4_php.mp4" (ext selalu dari MIME asli!)
-//	mode "uuid":   nama acak 16 hex char (misal "a3f9c1...mp4").
-//	mode lain:     dianggap stem kustom, ikut disanitasi.
-//
-// Extension selalu dari hasil sniff MIME, bukan dari nama input,
-// biar nama nggak bisa dipakai nyelundupin ".php".
 func OutputName(inPath, mime string, cfg map[string]any) string {
 	mode, _ := cfg["output"].(string)
 	var stem string
@@ -44,8 +34,6 @@ func OutputName(inPath, mime string, cfg map[string]any) string {
 	return stem + OutExt(mime)
 }
 
-// Sanitize: hanya huruf, angka, "-", "_". Selainnya jadi "_".
-// Unicode letters dilipat ke "_" agar aman di semua FS & URL.
 func Sanitize(s string) string {
 	var b strings.Builder
 	prevUnder := false

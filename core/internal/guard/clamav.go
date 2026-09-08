@@ -8,14 +8,6 @@ import (
 	"time"
 )
 
-// scanClamAV: hook antivirus eksternal (opsional, fail-open bila tak ada).
-//
-//	cfg "clamav": true      -> wajib ada & dipakai (error bila tak terinstal)
-//	cfg "clamav": false     -> mati total
-//	absen/"auto"            -> dipakai bila clamdscan/clamscan ketemu di PATH,
-//	                           dilewati diam bila tidak (shared hosting aman).
-//
-// Return (signature, used, err). signature "" = bersih.
 func scanClamAV(path string, cfg map[string]any) (string, bool, error) {
 	mode := "auto"
 	if v, ok := cfg["clamav"]; ok {
@@ -56,12 +48,9 @@ func scanClamAV(path string, cfg map[string]any) (string, bool, error) {
 	if err != nil && ctx.Err() == context.DeadlineExceeded {
 		return "", false, fmt.Errorf("clamav timeout")
 	}
-	// exit 1 tanpa FOUND = file bermasalah non-virus (abaikan, guard utama jalan);
-	// exit 0 = bersih. Keduanya: used=true, signature kosong.
 	return "", true, nil
 }
 
-// parseClamSig: "/path/file: Eicar-Test-Signature FOUND" -> "Eicar-Test-Signature".
 func parseClamSig(s string) string {
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)

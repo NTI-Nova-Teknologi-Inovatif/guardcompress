@@ -1,6 +1,3 @@
-// Package guard: fase cek — validasi format + scan ringan.
-// Sekarang: magic numbers stdlib + betulin deteksi MP4 + heuristic webshell.
-// Nanti (v2): yara-x beneran + rules/ diembed.
 package guard
 
 import (
@@ -38,13 +35,10 @@ var defaultAllow = []string{
 	"image/jpeg", "image/png", "image/webp", "image/gif",
 }
 
-// outExtByMime: extension OUTPUT (bisa beda dari input bila transcoding
-// antar container, misal wav besar -> mp3 hemat).
 var outExtByMime = map[string]string{
 	"audio/wav": ".mp3", "audio/wave": ".mp3", "audio/flac": ".mp3",
 }
 
-// OutExt: extension untuk file hasil (lihat outExtByMime, fallback extByMime).
 func OutExt(mime string) string {
 	if e, ok := outExtByMime[mime]; ok {
 		return e
@@ -52,8 +46,6 @@ func OutExt(mime string) string {
 	return extFor(mime)
 }
 
-// extToMime: config ramah-developer `allow_ext: ["jpg","mp4"]`.
-// Kunci = extension familiar, nilai = MIME kanonis hasil sniffing.
 var extToMime = map[string][]string{
 	"jpg": {"image/jpeg"}, "jpeg": {"image/jpeg"},
 	"png": {"image/png"}, "webp": {"image/webp"}, "gif": {"image/gif"},
@@ -67,7 +59,6 @@ var extToMime = map[string][]string{
 	"m4a": {"audio/mp4"}, "flac": {"audio/flac"},
 }
 
-// mimeAlias: ejaan ganda MIME yang dianggap sama saat allowlist.
 var mimeAlias = map[string]string{
 	"audio/wav": "audio/wave", "audio/wave": "audio/wav",
 	"audio/ogg": "application/ogg", "application/ogg": "audio/ogg",
@@ -88,14 +79,6 @@ func mimeAllowed(mime string, allow []string) bool {
 	return false
 }
 
-// resolveAllow: daftar izin efektif.
-//
-//	tanpa allow & tanpa allow_ext -> default bawaan
-//	hanya allow                 -> persis itu (ganti default)
-//	hanya allow_ext             -> persis petanya (preset image()/video()/audio())
-//	keduanya                    -> gabungan (union)
-//
-// Extension tak dikenal = error developer (exit 1), bukan blocked.
 func resolveAllow(cfg map[string]any) ([]string, error) {
 	var hasAllow bool
 	var allow []string
@@ -138,10 +121,6 @@ func resolveAllow(cfg map[string]any) ([]string, error) {
 	}
 }
 
-// Token berbahaya: webshell / script polyglot yang sering ditempel di media.
-// fold=true untuk pola yang case-insensitive di engine aslinya
-// (fungsi PHP & tag HTML tidak peduli huruf besar/kecil).
-// Varian UTF-16-LE/BE dari "<?php" ikut dipindai (webshell unicode).
 type token struct {
 	pat  []byte
 	fold bool
@@ -175,14 +154,11 @@ func (r Result) SafeExt() string {
 	if e, ok := extByMime[r.Mime]; ok {
 		return e
 	}
-	// fallback dari nama file asal bila mime tak dikenal (tak dipakai saat blocked)
 	return ".bin"
 }
 
 func Scan(path string, cfg map[string]any) (Result, error) {
 	res := Result{Details: map[string]any{}}
-	// Tolak symlink: jangan sampai scan diarahkan baca file lain milik server.
-	// (path normalnya tmp acak, tapi tetap dicek.)
 	if li, err := os.Lstat(path); err != nil {
 		return res, err
 	} else if li.Mode()&os.ModeSymlink != 0 {
@@ -197,8 +173,6 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 	res.Size = fi.Size()
 	res.ModNano = fi.ModTime().UnixNano()
 
-	// Tolak Windows ADS ("file.png:evil"): stream alternatif bisa
-	// menyembunyikan konten dari scan maupun dari penulisan biasa.
 	if runtime.GOOS == "windows" {
 		rest := path
 		if len(rest) > 2 && rest[1] == ':' {
@@ -238,8 +212,6 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 	res.Mime = mime
 	res.Details["sniffed"] = mime
 
-	// Peringatan double-extension: evil.mp4.php (nama file tmp normalnya acak
-	// tanpa extension, tapi tetap tolak pola executable sebagai jaring kedua).
 	lower := strings.ToLower(filepath.Base(path))
 	for _, bad := range []string{".php", ".phtml", ".phar", ".asp", ".aspx",
 		".jsp", ".jspx", ".cgi", ".pl", ".py", ".sh", ".exe", ".com", ".bat",
@@ -251,9 +223,6 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		}
 	}
 
-	// Scan heuristic dulu sebelum allowlist biar alasan blokirnya pas.
-	// Streaming per-chunk 1MB + overlap, bukan head+tail, supaya payload
-	// yang ngumpet di TENGAH file gede tetap ketemu. Memory tetap kecil.
 	if reason, token := streamScan(f, res.Size); reason != "" {
 		res.Reason = reason
 		if token != "" {
@@ -262,9 +231,6 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		return res, nil
 	}
 
-	// Container tersembunyi (ZIP/RAR/7z/PE/ELF tervalidasi struktur).
-	// Default AKTIF (inti keamanan); matikan hanya bila app memang butuh
-	// ("block_embedded_containers": false) — resiko tanggung sendiri.
 	if v, ok := cfg["block_embedded_containers"].(bool); !ok || v {
 		if found := scanContainers(f, res.Size); found != "" {
 			res.Reason = found
@@ -273,8 +239,6 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		}
 	}
 
-	// ClamAV opsional: dipakai bila terinstal ("auto"), dilewati diam bila tidak.
-	// Nyalakan paksa via {"clamav": true} (error bila tak ada), matikan via false.
 	if sig, used, err := scanClamAV(path, cfg); err != nil {
 		return res, err
 	} else if used {
@@ -285,8 +249,6 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		}
 	}
 
-	// Allowlist fleksibel: `allow` (MIME) gabung `allow_ext` (extension
-	// familiar: ["jpg","mp4"]). Extension tak dikenal = error developer.
 	allow, err := resolveAllow(cfg)
 	if err != nil {
 		return res, err
@@ -307,9 +269,6 @@ func min(a, b int) int {
 	return b
 }
 
-// SniffFile: deteksi MIME dari magic numbers (bukan extension).
-// Dipakai guard saat ingest DAN verifikasi ulang output (deteksi perubahan
-// format setelah kompres) serta perintah `verify` untuk audit simpanan.
 func SniffFile(path string) (string, map[string]any) {
 	details := map[string]any{}
 	f, err := os.Open(path)
@@ -317,7 +276,6 @@ func SniffFile(path string) (string, map[string]any) {
 		return "unknown", details
 	}
 	defer f.Close()
-	// Header 8KB agar deteksi ftyp MP4 akurat.
 	head := make([]byte, 8192)
 	n, _ := f.Read(head)
 	head = head[:n]
@@ -325,8 +283,6 @@ func SniffFile(path string) (string, map[string]any) {
 		return "unknown", details
 	}
 	mime := http.DetectContentType(head[:min(n, 512)])
-	// Fix: ftyp dengan brand mayor yang dikenal.
-	// Video -> video/mp4, audio M4A/M4B -> audio/mp4 (bukan video!).
 	if mime == "application/octet-stream" && len(head) > 12 && string(head[4:8]) == "ftyp" {
 		brand := string(head[8:12])
 		switch brand {
@@ -338,11 +294,9 @@ func SniffFile(path string) (string, map[string]any) {
 			details["ftyp_fix"] = true
 		}
 	}
-	// Fix: FLAC magic "fLaC".
 	if mime == "application/octet-stream" && len(head) > 4 && string(head[:4]) == "fLaC" {
 		mime = "audio/flac"
 	}
-	// Fix: WebM = EBML header 0x1A45DFA3
 	if mime == "application/octet-stream" && len(head) > 4 &&
 		head[0] == 0x1A && head[1] == 0x45 && head[2] == 0xDF && head[3] == 0xA3 {
 		mime = "video/webm"
@@ -350,8 +304,6 @@ func SniffFile(path string) (string, map[string]any) {
 	return mime, details
 }
 
-// TopType: keluarga format ("video", "audio", "image", ...) untuk memastikan
-// output tidak berubah keluarga dari input yang lolos.
 func TopType(mime string) string {
 	if i := strings.Index(mime, "/"); i > 0 {
 		return mime[:i]
@@ -359,9 +311,6 @@ func TopType(mime string) string {
 	return mime
 }
 
-// streamScan: pindai seluruh file per-chunk 1MB dengan overlap 4KB.
-// Overlap besar agar laju teks yang terpotong batas chunk tetap utuh
-// terlihat oleh inTextRun dari kedua sisi.
 func streamScan(f *os.File, size int64) (string, string) {
 	const chunkSize = 1 << 20
 	const overlap = 4096
@@ -381,8 +330,6 @@ func streamScan(f *os.File, size int64) (string, string) {
 		window := make([]byte, 0, len(prev)+len(chunk))
 		window = append(window, prev...)
 		window = append(window, chunk...)
-		// Varian lowercase sekali per window untuk token fold (ASCII-only
-		// agar offset tetap 1:1 dengan buffer asli).
 		lowered := asciiLower(window)
 		for _, tok := range suspiciousTokens {
 			hay := window
@@ -410,10 +357,6 @@ func streamScan(f *os.File, size int64) (string, string) {
 	return "", ""
 }
 
-// foundAt: cari pat di hay (hay boleh versi lowercase dari orig).
-// Token pendek hanya dihitung bila duduk di laju teks printable >=24
-// (dicek pada ORIG agar tidak terpengaruh lowering).
-// Token panjang & unik (EICAR, UTF-16) cocok langsung tanpa cek konteks.
 func foundAt(hay, orig, pat []byte) bool {
 	if isDirectToken(pat) {
 		return bytes.Contains(hay, pat)
@@ -439,18 +382,12 @@ func isDirectToken(tok []byte) bool {
 	if bytes.HasPrefix(tok, []byte("X5O!P%@AP")) {
 		return true
 	}
-	// UTF-16 variants mengandung NUL -> tak pernah lolos inTextRun, direct saja.
 	if bytes.IndexByte(tok, 0) >= 0 {
 		return true
 	}
-	// Token >=4 byte cukup unik di data biner (256^-4 per posisi):
-	// cocok langsung TANPA cek konteks agar webshell PENDEK
-	// ("<?php eval(1); ?>") tak lolos. Hanya "<%" (2) dan "<?=" (3)
-	// yang butuh uji laju-teks.
 	return len(tok) >= 4
 }
 
-// inTextRun: panjang laju printable maksimal yang memuat token >= 24?
 func inTextRun(buf []byte, at, tokLen int) bool {
 	const minRun = 24
 	l := at
@@ -468,8 +405,6 @@ func isPrintable(b byte) bool {
 	return b == 9 || b == 10 || b == 13 || (b >= 32 && b < 127)
 }
 
-// asciiLower: lowercase ASCII-only (A-Z -> a-z), byte lain utuh.
-// Panjang & offset dijamin 1:1 dengan input (aman untuk pemetaan temuan).
 func asciiLower(b []byte) []byte {
 	out := make([]byte, len(b))
 	for i, c := range b {

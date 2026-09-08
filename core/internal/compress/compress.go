@@ -1,10 +1,3 @@
-// Package compress: fase kompres — bungkus ffmpeg static.
-// Cari ffmpeg dengan urutan:
-//  1. env GUARDCOMPRESS_FFMPEG (diisi installer dari hasil download + cek SHA)
-//  2. ffmpeg(.exe) sebelah binary core
-//  3. ffmpeg di PATH (kalau admin emang udah install)
-//
-// Kalau nggak ketemu semua: fallback copy file (mode guard-only) biar nggak gagal total.
 package compress
 
 import (
@@ -30,7 +23,6 @@ type Result struct {
 	Thumbs   []Thumb
 }
 
-// Thumb: turunan ukuran/format dari gambar utama.
 type Thumb struct {
 	Path   string `json:"path"`
 	Width  int    `json:"width"`
@@ -60,7 +52,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	res := Result{Details: map[string]any{}}
 	ff := FindFFmpeg()
 	if ff == "" {
-		// Guard-only fallback: copy tanpa kompresi
 		if err := copyFile(inPath, outPath); err != nil {
 			return res, err
 		}
@@ -70,9 +61,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		return res, nil
 	}
 
-	// File di bawah ambang nggak usah bayar ongkos spawn ffmpeg.
-	// Default 0 = selalu kompres (perilaku lama).
-	// Rekomendasi situs avatar: 100 (file <100KB langsung copy).
 	if kb := minCompressKB(cfg); kb > 0 {
 		if fi, err := os.Stat(inPath); err == nil && fi.Size() < int64(kb)*1024 {
 			if err := copyFile(inPath, outPath); err != nil {
@@ -90,9 +78,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	if v, ok := cfg["video_crf"]; ok {
 		crf = fmt.Sprintf("%v", v)
 	}
-	// Validasi angka config biar errornya jelas di awal, bukan error
-	// ffmpeg yang misterius. Injeksi shell mustahil (argv tanpa shell),
-	// tapi nilai ngawur tetap ditolak.
 	if n, err := strconv.Atoi(crf); err != nil || n < 0 || n > 51 {
 		return res, fmt.Errorf("invalid video_crf (0-51): %v", cfg["video_crf"])
 	}
@@ -103,9 +88,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	if ok, _ := regexp.MatchString(`^[0-9]+k$`, abitrate); !ok {
 		return res, fmt.Errorf("invalid audio_bitrate (cth 96k): %v", cfg["audio_bitrate"])
 	}
-	// ANTI-DOWN: batasi thread CPU per job ffmpeg. Default 2 (aman di VPS
-	// kecil/shared; 1 upload tak bisa menelan semua core). Naikkan
-	// (cth 4-8) hanya di server khusus media + queue terbatas.
 	threads := "2"
 	if v, ok := cfg["ffmpeg_threads"]; ok {
 		threads = fmt.Sprintf("%v", v)
@@ -115,7 +97,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	}
 
 	var args []string
-	// "-threads" global ditaruh di depan agar berlaku untuk semua filter+codec.
 	tflag := []string{"-y", "-threads", threads}
 	switch {
 	case len(mime) >= 5 && mime[:5] == "video":
@@ -125,8 +106,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 			"-acodec", "aac", "-b:a", abitrate,
 			outPath)
 	case len(mime) >= 5 && mime[:5] == "audio" || mime == "application/ogg":
-		// Codec per format input; output ext diatur guard.OutExt
-		// (wav/flac besar -> mp3 hemat; ogg -> ogg; m4a -> m4a).
 		acodec := "libmp3lame"
 		if mime == "application/ogg" || mime == "audio/ogg" {
 			acodec = "libvorbis"
@@ -149,9 +128,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 		if n, err := strconv.Atoi(q); err != nil || n < 1 || n > 100 {
 			return res, fmt.Errorf("invalid image_quality (1-100): %v", cfg["image_quality"])
 		}
-		// Kecilkan dimensi bila lebih besar dari maxDim, pertahankan aspek.
-		// JPEG/WebP: quality terkontrol. PNG: kompresi max (lossless).
-		// GIF: palet optimal 1-pass (tetap animasi).
 		args = append(append(tflag, "-i", inPath), imageCodecArgs(mime, maxDim, q)...)
 		args = append(args, outPath)
 	default: // mime tak dikenal (tak lolos guard normal): copy aman
@@ -167,8 +143,6 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	ctx, cancel := ctxTimeout(cfg)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, ff, args...)
-	// Di Linux, ffmpeg ikut mati kalau core mati mendadak.
-	// (lihat procattr_linux.go; no-op di OS lain)
 	setDeathsig(cmd)
 	out, err := cmd.CombinedOutput()
 	res.Details["ffmpeg"] = ff
@@ -180,29 +154,23 @@ func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	if err != nil {
 		return res, err
 	}
-	// Output 0 byte = hasil korup, jangan dianggap sukses.
 	if fi.Size() == 0 {
 		os.Remove(outPath)
 		return res, fmt.Errorf("ffmpeg produced empty output")
 	}
 	res.NewBytes = fi.Size()
 	res.Details["mode"] = "ffmpeg"
-	// Turunan gambar (thumbs + webp) dibuat SETELAH output utama valid.
-	// Gagal di turunan tak menggugurkan hasil utama (dicatat, lanjut).
 	if isImageMime(mime) {
 		makeDerivatives(ctx, ff, inPath, outPath, mime, cfg, &res)
 	}
 	return res, nil
 }
 
-// thumbSpec: satu turunan ukuran. "300" -> suffix "-300w"; map
-// {"w":300,"suffix":"-sm"} -> suffix kustom.
 type thumbSpec struct {
 	w      int
 	suffix string
 }
 
-// parseThumbs: baca cfg "thumb_widths" ([300, 800] atau [{"w":300,"suffix":"-sm"}]).
 func parseThumbs(cfg map[string]any) []thumbSpec {
 	raw, ok := cfg["thumb_widths"].([]any)
 	if !ok {
@@ -235,7 +203,6 @@ func parseThumbs(cfg map[string]any) []thumbSpec {
 			if sfx == "" {
 				sfx = "-" + strconv.Itoa(w) + "w"
 			}
-			// sanitasi suffix: huruf/angka/dash saja
 			sfx = regexp.MustCompile(`[^A-Za-z0-9-]`).ReplaceAllString(sfx, "")
 			if sfx == "" {
 				sfx = "-" + strconv.Itoa(w) + "w"
@@ -246,7 +213,6 @@ func parseThumbs(cfg map[string]any) []thumbSpec {
 	return out
 }
 
-// probeWidth: lebar gambar via stdlib (jpeg/png/gif). 0 bila tak dikenal (webp).
 func probeWidth(path string) int {
 	f, err := os.Open(path)
 	if err != nil {
@@ -260,8 +226,6 @@ func probeWidth(path string) int {
 	return c.Width
 }
 
-// makeDerivatives: thumbs multi-ukuran + salinan webp di outDir yang sama.
-// Gagal di turunan tak menggugurkan hasil utama (dicatat di thumb_errors).
 func makeDerivatives(ctx context.Context, ff, inPath, outPath, mime string, cfg map[string]any, res *Result) {
 	specs := parseThumbs(cfg)
 	wantWebp, _ := cfg["webp"].(bool)
@@ -306,7 +270,6 @@ func makeDerivatives(ctx context.Context, ff, inPath, outPath, mime string, cfg 
 		made = append(made, dst)
 	}
 	if wantWebp {
-		// Konversi dari file JADI (lebih cepat & konsisten daripada dari input).
 		targets := append([]string{outPath}, made...)
 		for _, src := range targets {
 			dst := strings.TrimSuffix(src, filepath.Ext(src)) + ".webp"
@@ -333,7 +296,6 @@ func noteThumbErr(res *Result, dst string, err error) {
 	res.Details["thumb_errors"] = append(list, dst+": "+err.Error())
 }
 
-// threadsOf: baca ulang batas thread (dipakai tiap pemanggilan ffmpeg turunan).
 func threadsOf(cfg map[string]any) string {
 	if v, ok := cfg["ffmpeg_threads"]; ok {
 		if s := fmt.Sprintf("%v", v); s != "" {
@@ -345,7 +307,6 @@ func threadsOf(cfg map[string]any) string {
 	return "2"
 }
 
-// isImageMime: keluarga gambar yang didukung turunan.
 func isImageMime(mime string) bool {
 	switch mime {
 	case "image/jpeg", "image/png", "image/webp", "image/gif":
@@ -354,10 +315,6 @@ func isImageMime(mime string) bool {
 	return false
 }
 
-// imageCodecArgs: argumen ffmpeg untuk keluarga codec gambar (1 code path
-// dipakai output utama + thumbs agar konsisten).
-// String filter GIF jangan diubah-ubah: sudah pas dengan yang lolos uji
-// (h tanpa kutip sebelum :flags).
 func imageCodecArgs(mime, dim, q string) []string {
 	switch mime {
 	case "image/png":
@@ -393,10 +350,6 @@ func tail(s string, n int) string {
 	return s[len(s)-n:]
 }
 
-// ctxTimeout: batas waktu ffmpeg agar file jahat/korup yang bikin hang
-// tidak menggantung worker selamanya. Default 100s (harus < timeout wrapper
-// 120s agar core yang selalu menuai ffmpeg, bukan wrapper).
-// Override via cfg "timeout_sec" / "timeoutSec" (file besar + queue job).
 func ctxTimeout(cfg map[string]any) (context.Context, context.CancelFunc) {
 	secs := 100.0
 	for _, k := range []string{"timeout_sec", "timeoutSec"} {
@@ -415,7 +368,6 @@ func ctxTimeout(cfg map[string]any) (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-// minCompressKB: ambang lewati-kompres (0 = selalu kompres).
 func minCompressKB(cfg map[string]any) int {
 	for _, k := range []string{"min_compress_kb", "minCompressKb"} {
 		switch v := cfg[k].(type) {
@@ -432,8 +384,6 @@ func minCompressKB(cfg map[string]any) int {
 	return 0
 }
 
-// CacheDir: lokasi lazy-download ffmpeg static + slot admission.
-// Bisa dipindah via env GUARDCOMPRESS_CACHE (container/serverless/home read-only).
 func CacheDir() string {
 	if c := os.Getenv("GUARDCOMPRESS_CACHE"); c != "" {
 		return c
@@ -444,7 +394,6 @@ func CacheDir() string {
 	return filepath.Join(os.TempDir(), "guardcompress-cache")
 }
 
-// ProbeFFmpegVersion: baris pertama `ffmpeg -version`, "" bila gagal.
 func ProbeFFmpegVersion(ff string) string {
 	cmd := exec.Command(ff, "-version")
 	out, err := cmd.Output()

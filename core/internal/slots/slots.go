@@ -1,10 +1,3 @@
-// Package slots: semafor file lintas-proses. Nggak butuh daemon,
-// nggak butuh lock server — cukup file + O_EXCL, jadi jalan di semua
-// bahasa/OS. Kalau slot penuh, tolak cepat "busy" (HTTP 429) daripada
-// terima semua terus server tumbang.
-//
-// Batasnya lunak: race sempit bisa lolos 1-2 slot. Cukup buat admission,
-// bukan buat batas keamanan keras.
 package slots
 
 import (
@@ -17,14 +10,10 @@ import (
 	"time"
 )
 
-// ErrBusy dikembalikan bila slot penuh.
 var ErrBusy = errors.New("server busy, retry later")
 
-// StaleAfter: lock lebih tua dari ini dianggap yatim (proses crash) dan dibersihkan.
 const StaleAfter = 15 * time.Minute
 
-// Acquire merebut 1 slot di dir (dibuat 0700 bila belum ada).
-// max <= 0 artinya tanpa batas. Return fungsi release (wajib dipanggil!).
 func Acquire(dir string, max int) (func(), error) {
 	if max <= 0 {
 		return func() {}, nil
@@ -37,8 +26,6 @@ func Acquire(dir string, max int) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	// Hitung ulang SETELAH klaim: bila ternyata over kuota (race),
-	// lepaskan dan mundur (backpressure konvergen).
 	if countFresh(dir) > max {
 		os.Remove(mine)
 		return nil, ErrBusy

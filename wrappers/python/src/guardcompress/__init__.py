@@ -61,14 +61,12 @@ def process(in_path: str, opts: dict | None = None) -> dict:
         if isinstance(report.get("details"), dict) and report["details"].get("busy"):
             raise BusyError(str(report.get("reason") or "server busy"), report)
         raise RuntimeError("guardcompress failed: " + str(report.get("reason", r.stderr)))
-    # Gagal cepat di batas: jangan kembalikan path None yang meledak belakangan.
     if not report.get("out_path"):
         shutil.rmtree(out, ignore_errors=True)
         raise RuntimeError("guardcompress: out_path hilang dari report")
     return {"path": report.get("out_path"), "report": report}
 
 
-# Preset per jenis (1 sistem di belakangnya, opts user menang bila menimpa).
 def image(in_path: str, opts: dict | None = None) -> dict:
     return process(in_path, {"allow_ext": ["jpg", "jpeg", "png", "webp", "gif"], **(opts or {})})
 
@@ -116,7 +114,6 @@ def batch(items, opts: dict | None = None) -> dict | list:
         with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as ex:
             vals = list(ex.map(lambda kv: _one(kv[1]), entries))
     else:
-        # Sekuensial: error teknis raise langsung (fail-fast).
         vals = [_one(it) for _, it in entries]
     if as_dict:
         return {k: v for (k, _), v in zip(entries, vals)}

@@ -1,6 +1,5 @@
 'use strict';
-// postinstall: download core binary + ffmpeg static dari GitHub Releases,
-// verifikasi SHA256 via CHECKSUMS.txt, skip bila file lokal sudah cocok.
+// Download core binary + ffmpeg dari GitHub Releases (verifikasi SHA256).
 // Env: GUARDCOMPRESS_VERSION, GUARDCOMPRESS_RELEASE_BASE
 const https = require('https');
 const fs = require('fs');

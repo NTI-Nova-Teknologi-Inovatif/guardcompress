@@ -1,9 +1,6 @@
 <?php
-// Installer: download core binary + ffmpeg static dari GitHub Releases
-// ke ~/.cache/guardcompress, verifikasi SHA256 via CHECKSUMS.txt.
+// Download core binary + ffmpeg dari GitHub Releases (verifikasi SHA256).
 // Usage: php bin/install-binary.php [version]
-// Idempotent: file yang hash-nya sudah cocok dilewati.
-// Tanpa dependensi tambahan, hanya pakai copy()/file_get_contents() + hash_file().
 declare(strict_types=1);
 
 $version = $argv[1] ?? getenv('GUARDCOMPRESS_VERSION') ?: 'v0.1.0';

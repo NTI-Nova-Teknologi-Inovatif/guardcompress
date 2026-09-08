@@ -7,12 +7,6 @@ import (
 	"os"
 )
 
-// File media isinya boleh byte apa aja, tapi container executable/arsip
-// yang strukturnya VALID di dalamnya itu pola nyelundupin klasik
-// (zip di ekor PNG, exe ditempel di video).
-// Magic pendek kayak "PK" kalau dicocokkan mentah bakal false-positive di
-// data acak, makanya tiap temuan wajib lolos validasi struktur dulu.
-
 var (
 	sigZIPLocal   = []byte("PK\x03\x04")
 	sigZIPEOCD    = []byte("PK\x05\x06")
@@ -23,9 +17,6 @@ var (
 	sigELF        = []byte{0x7f, 'E', 'L', 'F'}
 )
 
-// findContainer: kembalikan ("rar"|"7z"|"pe"|"elf", offset) untuk magic yang
-// tervalidasi lokal di window. ZIP ditangani terpisah (butuh baca absolut).
-// baseOff = offset absolut awal window (untuk laporan).
 func findContainer(window []byte, baseOff int64) (string, int64) {
 	if at := bytes.Index(window, sigRAR); at >= 0 {
 		if at+10 <= len(window) && (window[at+9] == 0 || window[at+9] == 1) {
@@ -46,7 +37,6 @@ func findContainer(window []byte, baseOff int64) (string, int64) {
 	return "", -1
 }
 
-// collectEOCD: kumpulkan offset absolut kandidat EOCD (dibatasi 16).
 func collectEOCD(f *os.File, size int64) []int64 {
 	const chunkSize = 1 << 20
 	var out []int64
@@ -87,8 +77,6 @@ func collectEOCD(f *os.File, size int64) []int64 {
 	return out
 }
 
-// validZIPAt: validasi EOCD di offset absolut + rantai header terurut
-// (local PK03 -> central PK01 -> EOCD) dengan field waras.
 func validZIPAt(f *os.File, size, eocd int64) bool {
 	if eocd < 0 || eocd+22 > size {
 		return false
@@ -102,7 +90,6 @@ func validZIPAt(f *os.File, size, eocd int64) bool {
 	if entries == 0 || cdSize <= 0 || cdSize > size {
 		return false
 	}
-	// Central header harus ada sebelum EOCD, local header sebelum central.
 	back := eocd
 	if back > 1<<20 {
 		back = 1 << 20
@@ -118,7 +105,6 @@ func validZIPAt(f *os.File, size, eocd int64) bool {
 	return bytes.Index(probe[:ci], sigZIPLocal) >= 0
 }
 
-// validPE: "MZ" + e_lfanew menunjuk "PE\0\0" yang terbaca utuh.
 func validPE(window []byte) (string, int) {
 	start := 0
 	for {
@@ -142,9 +128,6 @@ func validPE(window []byte) (string, int) {
 	}
 }
 
-// scanContainers: pindai file per-chunk (pakai ulang pola streaming).
-// ZIP via kandidat EOCD + validasi absolut; sisanya validasi lokal window.
-// Return deskripsi temuan, "" bila bersih.
 func scanContainers(f *os.File, size int64) string {
 	for _, eocd := range collectEOCD(f, size) {
 		if validZIPAt(f, size, eocd) {

@@ -1,9 +1,3 @@
-// Command guardcompress: inti CLI, jadi satu binary.
-// Kontrak CLI (jangan diubah sembarangan, wrapper ngandalin format ini):
-//
-//	guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]
-//	exit 0 = bersih, exit 2 = diblokir, exit 1 = error
-//	stdout (check --json) = report.json di baris terakhir
 package main
 
 import (
@@ -75,7 +69,6 @@ usage:
   guardcompress version`)
 }
 
-// fileSHA256: sidik streaming (memory konstan walau file 500MB).
 func fileSHA256(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -99,11 +92,7 @@ func runCheck() {
 
 	start := time.Now()
 	report := Report{InPath: *inPath, Details: map[string]any{}}
-	// Slot admission dilepas di SEMUA jalur keluar (fail memakai os.Exit,
-	// jadi release eksplisit — bukan defer).
 	var releaseSlot func()
-	// Struktur output di out-dir (gampang dicek manual):
-	//   <nama-aman>.<ext> + report.json (selalu ditulis, blocked pun ada jejaknya)
 	saveReport := func() {
 		if *outDir == "" {
 			return
@@ -138,9 +127,6 @@ func runCheck() {
 		fail("cannot create out-dir: "+err.Error(), 1)
 	}
 
-	// Rebut slot lintas-proses SEBELUM kerja berat (backpressure).
-	// Penuh -> tolak cepat busy (HTTP 429), bukan terima lalu server tumbang.
-	// Default = jumlah CPU; 0 = tanpa batas (server khusus media).
 	maxSlots := runtime.NumCPU()
 	if v, ok := cfg["max_slots"]; ok {
 		switch n := v.(type) {
@@ -165,22 +151,17 @@ func runCheck() {
 	report.OrigBytes = gres.Size
 	report.Details["guard"] = gres.Details
 	if !gres.Allowed {
-		// Isi reason dulu agar salinan forensik di karantina lengkap.
 		report.Reason = "blocked: " + gres.Reason
 		quarantine(*inPath, &report, cfg)
 		fail("blocked: "+gres.Reason, 2)
 	}
 
-	// AUDIT TOCTOU: file bisa diganti penyerang di antara scan & kompres
-	// (sharing tmp). Batalkan bila ukuran ATAU waktu-ubah berubah setelah scan.
 	if fi2, err := os.Stat(*inPath); err != nil || fi2.Size() != gres.Size ||
 		fi2.ModTime().UnixNano() != gres.ModNano {
 		fail("input changed after scan (possible race), abort", 1)
 	}
 
 	outPath := filepath.Join(*outDir, guard.OutputName(*inPath, gres.Mime, cfg))
-	// Jangan sampai output = file input itu sendiri. User CLI bisa aja
-	// mengarah --out-dir ke folder input; ffmpeg -y bakal menghajar input.
 	if same, _ := samePathFile(*inPath, outPath); same {
 		fail("refusing: output path equals input (use a different --out-dir)", 1)
 	}
@@ -193,16 +174,12 @@ func runCheck() {
 	report.Thumbs = cres.Thumbs
 	report.Details["compress"] = cres.Details
 
-	// Sniff ulang HASIL kompres: keluarganya harus sama dengan input yang
-	// lolos (video->video dst). Kalau ffmpeg "berubah pikiran" atau file
-	// ditukar di tengah jalan, langsung digagalkan.
 	outMime, _ := guard.SniffFile(outPath)
 	report.Details["out_mime"] = outMime
 	if guard.TopType(outMime) != guard.TopType(gres.Mime) {
 		os.Remove(outPath)
 		fail("output format changed after compress (in "+gres.Mime+", out "+outMime+")", 1)
 	}
-	// Sidik output: simpan di DB; verify ulang kapan saja via `verify`.
 	if sum, err := fileSHA256(outPath); err != nil {
 		os.Remove(outPath)
 		fail("cannot fingerprint output: "+err.Error(), 1)
@@ -220,9 +197,6 @@ func runCheck() {
 	fmt.Println(string(b))
 }
 
-// quarantine: salin file yang DIBLOKIR ke dir forensik + laporannya.
-// Default MATI ("") = langsung buang (aman). Nyalakan hanya bila butuh audit:
-// --config {"quarantine_dir": "/var/lib/gc-quarantine"} (root-only, 0700!).
 func quarantine(inPath string, report *Report, cfg map[string]any) {
 	qd, _ := cfg["quarantine_dir"].(string)
 	if qd == "" {
@@ -253,9 +227,6 @@ func copyFileLocal(src, dst string) error {
 	return err
 }
 
-// runVerify: audit file SIMPANAN kapan saja (cron/queue berkala).
-// Mendeteksi perubahan SETELAH lolos: hash beda dari sidik saat ingest,
-// atau pola jahat baru (rules query) yang dulu belum dikenal.
 func runVerify() {
 	fs := flag.NewFlagSet("verify", flag.ExitOnError)
 	inPath := fs.String("in", "", "stored file path to audit")
@@ -285,7 +256,6 @@ func runVerify() {
 	if err := json.Unmarshal([]byte(*configStr), &cfg); err != nil {
 		done("error", "invalid --config JSON: "+err.Error(), 1)
 	}
-	// Verify ikut antre slot yang sama (audit massal cron tak boleh menumbangkan server).
 	maxSlots := runtime.NumCPU()
 	if v, ok := cfg["max_slots"]; ok {
 		switch n := v.(type) {
@@ -301,7 +271,6 @@ func runVerify() {
 		done("error", "server busy, retry later", 1)
 	}
 	releaseSlot = rel
-	// 1. Sidik sekarang vs sidik ingest -> ketahuan bila file diganti/diubah.
 	if *expectSHA != "" {
 		sum, err := fileSHA256(*inPath)
 		if err != nil {
@@ -313,7 +282,6 @@ func runVerify() {
 			done("blocked", "stored file CHANGED since ingest (hash mismatch)", 2)
 		}
 	}
-	// 2. Scan ulang dengan rules saat ini (tangkap pola baru).
 	gres, err := guard.Scan(*inPath, cfg)
 	if err != nil {
 		done("error", "guard error: "+err.Error(), 1)
@@ -390,8 +358,6 @@ try {
 	}
 }
 
-// samePathFile: true bila outPath menunjuk file yang sama dengan inPath
-// (banding path absolut + SameFile bila target sudah ada).
 func samePathFile(inPath, outPath string) (bool, error) {
 	ai, err := filepath.Abs(inPath)
 	if err != nil {

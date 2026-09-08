@@ -1,4 +1,3 @@
-// Package guardcompress: Go SDK tipis (os/exec wrapper).
 package guardcompress
 
 import (
@@ -16,7 +15,6 @@ type Result struct {
 	Report map[string]any
 }
 
-// Preset per jenis (1 sistem di belakangnya, opts user menang bila menimpa).
 func Image(inPath string, opts map[string]any) (Result, error) {
 	return Process(inPath, withDefault(opts, "allow_ext",
 		[]any{"jpg", "jpeg", "png", "webp", "gif"}))
@@ -43,20 +41,17 @@ func withDefault(opts map[string]any, key string, val any) map[string]any {
 	return out
 }
 
-// BatchItem: satu input dalam batch (Opts boleh nil = pakai bersama).
 type BatchItem struct {
 	Path string
 	Opts map[string]any
 }
 
-// BatchResult: hasil per input. Err==nil artinya ok; ErrBlocked menandai ditolak.
 type BatchResult struct {
 	Path   string
 	Report map[string]any
 	Err    error
 }
 
-// IsBlocked: true bila file ditolak scanner (bukan error teknis).
 func (b BatchResult) IsBlocked() bool {
 	return IsBlocked(b.Err)
 }
@@ -73,21 +68,14 @@ func isBusyReport(report map[string]any) bool {
 	return b
 }
 
-// IsBlocked: true bila file ditolak scanner (bukan error teknis).
 func IsBlocked(err error) bool {
 	return err != nil && len(err.Error()) >= 7 && err.Error()[:7] == "blocked"
 }
 
-// IsBusy: true bila server penuh (backpressure) -> retry nanti (HTTP 429).
 func IsBusy(err error) bool {
 	return err != nil && len(err.Error()) >= 5 && err.Error()[:5] == "busy:"
 }
 
-// Batch: multi-input beda jenis sekaligus. File ditolak terkumpul per item.
-// Mode sekuensial (default): error teknis menghentikan langsung (fail-fast).
-// Mode paralel (jobs>1): semua dijalankan, hasil terkumpul semua.
-// Paralel bila opts["jobs"] > 1 (default 1 = sekuensial, hemat resource).
-// Urutan hasil selalu sama dengan urutan input.
 func Batch(items []BatchItem, opts map[string]any) []BatchResult {
 	jobs := 1
 	if v, ok := opts["jobs"]; ok {
@@ -142,7 +130,6 @@ func runOne(it BatchItem, opts map[string]any) BatchResult {
 	return BatchResult{Path: r.Path, Report: r.Report, Err: err}
 }
 
-// Process memanggil binary core. Set GUARDCOMPRESS_BIN atau taruh binary di core/bin.
 func Process(inPath string, opts map[string]any) (Result, error) {
 	bin := os.Getenv("GUARDCOMPRESS_BIN")
 	if bin == "" {
@@ -156,8 +143,6 @@ func Process(inPath string, opts map[string]any) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	// Timeout wrapper (120s) harus lebih besar dari timeout ffmpeg core (100s)
-	// supaya yang menuai ffmpeg selalu core, bukan wrapper.
 	timeout := 120 * time.Second
 	if v, ok := opts["timeoutSec"]; ok {
 		switch n := v.(type) {
@@ -182,14 +167,12 @@ func Process(inPath string, opts map[string]any) (Result, error) {
 		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 2 {
 			return Result{}, fmt.Errorf("blocked: %v", report["reason"])
 		}
-		// Sinyal busy (backpressure): server penuh -> retry, bukan vonis jahat.
 		if isBusyReport(report) {
 			return Result{}, fmt.Errorf("busy: %v", report["reason"])
 		}
 		return Result{}, fmt.Errorf("guardcompress failed: %v (%s)", err, string(out))
 	}
 	p, _ := report["out_path"].(string)
-	// Gagal cepat di batas: fallback nama lama dihapus, error eksplisit.
 	if p == "" {
 		os.RemoveAll(outDir)
 		return Result{}, fmt.Errorf("guardcompress: out_path hilang dari report")

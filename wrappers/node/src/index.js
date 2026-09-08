@@ -1,5 +1,4 @@
 'use strict';
-// Thin wrapper: spawnSync guardcompress binary, parse report.json
 const { spawnSync, spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
@@ -35,13 +34,10 @@ function processFile(inPath, opts = {}) {
   if (r.status === 2) { cleanup(); const e = new Error('blocked: ' + (report.reason || '')); e.report = report; e.code = 'BLOCKED'; throw e; }
   if (r.status !== 0) {
     cleanup();
-    // Sinyal busy (backpressure): server penuh -> HTTP 429 + retry, bukan 422.
     if (report.details && report.details.busy) { const e = new Error(report.reason || 'server busy'); e.report = report; e.code = 'BUSY'; throw e; }
     const e = new Error('guardcompress failed: ' + (report.reason || r.stderr)); e.report = report; throw e;
   }
   if (r.error) { cleanup(); const e = new Error('guardcompress timeout/crash: ' + r.error.message); e.report = report; throw e; }
-  // Gagal cepat di batas: jangan kembalikan path undefined yang meledak
-  // belakangan di kode app dengan pesan membingungkan.
   if (!report.out_path) { cleanup(); const e = new Error('guardcompress: out_path hilang dari report'); e.report = report; throw e; }
   return { path: report.out_path, report };
 }
@@ -51,7 +47,6 @@ function toList(items) {
   return Object.entries(items).map(([key, v]) => ({ key, ...(typeof v === 'string' ? { path: v } : v) }));
 }
 
-// processFileAsync: versi non-blocking untuk batch paralel.
 function processFileAsync(inPath, opts = {}) {
   return new Promise((resolve, reject) => {
     let bin;
@@ -82,8 +77,6 @@ function processFileAsync(inPath, opts = {}) {
   });
 }
 
-// batchAsync: multi-input paralel (jobs default = CPU, maks 4).
-// Urutan hasil sama dengan urutan input. File ditolak terkumpul.
 async function batchAsync(items, opts = {}) {
   const list = toList(items);
   const asDict = !Array.isArray(items);
@@ -109,16 +102,10 @@ async function batchAsync(items, opts = {}) {
 }
 
 module.exports = { process: processFile, processFile, resolveBinary,
-  // cleanup(outDir): hapus folder tmp output setelah file dipindah ke storage.
-  // Wajib dipanggil app setelah sukses (kecuali file sudah dipindah).
   cleanup: (dir) => { try { fs.rmSync(dir, { recursive: true, force: true }); } catch {} },
-  // Preset per jenis (1 sistem di belakangnya, opts user menang bila menimpa).
   image: (p, o = {}) => processFile(p, { allow_ext: ['jpg', 'jpeg', 'png', 'webp', 'gif'], ...o }),
   video: (p, o = {}) => processFile(p, { allow_ext: ['mp4', 'mov', 'webm', 'mkv', 'avi'], ...o }),
   audio: (p, o = {}) => processFile(p, { allow_ext: ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'flac'], ...o }),
-  // Batch multi-input beda jenis: {avatar:'/tmp/a.png', video:'/tmp/b.mp4'}
-  // atau [{path, opts}]. File ditolak terkumpul (ok:false), error teknis lempar.
-  // Sinkron sekuensial; untuk paralel pakai batchAsync(items, {jobs}).
   batch: (items, opts = {}) => {
     const list = Array.isArray(items) ? items : Object.entries(items).map(([k, v]) => ({ key: k, ...(typeof v === 'string' ? { path: v } : v) }));
     const out = Array.isArray(items) ? [] : {};
