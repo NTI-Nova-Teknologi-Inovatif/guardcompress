@@ -121,7 +121,7 @@ wrappers/
   node/             # npm: guardcompress
   python/           # pip: guardcompress
   go/               # SDK go
-docs/               # ARCHITECTURE, CONFIG, CONTRACT, FFMPEG, RELEASE
+docs/               # ARCHITECTURE, CONFIG, CONTRACT, FFMPEG, RELEASE, FAQ, COMPARISON
 examples/           # contoh queue Laravel / BullMQ / Celery
 web/                # demo upload (contoh, bukan produksi)
 ```
