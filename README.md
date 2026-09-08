@@ -32,11 +32,11 @@ examples/           # contoh queue Laravel / BullMQ / Celery
 
 | Repo | Isi | Publish |
 |---|---|---|
-| `NeuNovaTech/guardcompress` | full monorepo | kode sumber |
-| `NeuNovaTech/guardcompress-js` | `wrappers/node/` | npm `guardcompress` |
-| `NeuNovaTech/guardcompress-php` | `wrappers/php/` | Packagist `guardcompress/php` |
-| `NeuNovaTech/guardcompress-python` | `wrappers/python/` | PyPI `guardcompress` |
-| `NeuNovaTech/guardcompress-go` | `wrappers/go/` | `go get .../wrappers/go` |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress` | full monorepo | kode sumber |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress-js` | `wrappers/node/` | npm `guardcompress` |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress-php` | `wrappers/php/` | Packagist `guardcompress/php` |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress-python` | `wrappers/python/` | PyPI `guardcompress` |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress-go` | `wrappers/go/` | `go get .../wrappers/go` |
 
 Wrapper dibagi lewat subtree split otomatis (lihat `.github/workflows/subtree.yml`).
 

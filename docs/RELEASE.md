@@ -4,11 +4,11 @@
 
 | Repo | Isi | Publish |
 |---|---|---|
-| `NeuNovaTech/guardcompress` | full monorepo (core + semua wrapper + docs) | kode sumber |
-| `NeuNovaTech/guardcompress-js` | `wrappers/node/` saja | npm (`guardcompress`) |
-| `NeuNovaTech/guardcompress-php` | `wrappers/php/` saja | Packagist (`guardcompress/php`) |
-| `NeuNovaTech/guardcompress-python` | `wrappers/python/` saja | PyPI (`guardcompress`) |
-| `NeuNovaTech/guardcompress-go` | `wrappers/go/` saja | `go get github.com/guardcompress/guardcompress/wrappers/go` |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress` | full monorepo (core + semua wrapper + docs) | kode sumber |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress-js` | `wrappers/node/` saja | npm (`guardcompress`) |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress-php` | `wrappers/php/` saja | Packagist (`guardcompress/php`) |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress-python` | `wrappers/python/` saja | PyPI (`guardcompress`) |
+| `NTI-Nova-Teknologi-Inovatif/guardcompress-go` | `wrappers/go/` saja | `go get github.com/guardcompress/guardcompress/wrappers/go` |
 
 ## Alur rilis
 

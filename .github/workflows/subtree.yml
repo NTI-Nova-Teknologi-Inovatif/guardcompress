@@ -8,22 +8,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git subtree split --prefix=wrappers/node -b split-js
-      - run: git push https://x-access-token:${{ secrets.PAT_JS }}@github.com/NeuNovaTech/guardcompress-js.git split-js:main --force
+      - run: git push https://x-access-token:${{ secrets.PAT_JS }}@github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-js.git split-js:main --force
   split-php:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: git subtree split --prefix=wrappers/php -b split-php
-      - run: git push https://x-access-token:${{ secrets.PAT_PHP }}@github.com/NeuNovaTech/guardcompress-php.git split-php:main --force
+      - run: git push https://x-access-token:${{ secrets.PAT_PHP }}@github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-php.git split-php:main --force
   split-python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: git subtree split --prefix=wrappers/python -b split-python
-      - run: git push https://x-access-token:${{ secrets.PAT_PYTHON }}@github.com/NeuNovaTech/guardcompress-python.git split-python:main --force
+      - run: git push https://x-access-token:${{ secrets.PAT_PYTHON }}@github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git split-python:main --force
   split-go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: git subtree split --prefix=wrappers/go -b split-go
-      - run: git push https://x-access-token:${{ secrets.PAT_GO }}@github.com/NeuNovaTech/guardcompress-go.git split-go:main --force
+      - run: git push https://x-access-token:${{ secrets.PAT_GO }}@github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go.git split-go:main --force
