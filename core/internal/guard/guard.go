@@ -368,7 +368,11 @@ func foundAt(hay, orig, pat []byte) bool {
 			return false
 		}
 		at := start + i
-		if inTextRun(orig, at, len(pat)) {
+		if isShortTag(pat) {
+			if l, r, ok := textRun(orig, at, len(pat), 12); ok && runHasPayload(asciiLower(orig[l:r])) {
+				return true
+			}
+		} else if inTextRun(orig, at, len(pat)) {
 			return true
 		}
 		start = at + 1
@@ -389,7 +393,11 @@ func isDirectToken(tok []byte) bool {
 }
 
 func inTextRun(buf []byte, at, tokLen int) bool {
-	const minRun = 24
+	_, _, ok := textRun(buf, at, tokLen, 24)
+	return ok
+}
+
+func textRun(buf []byte, at, tokLen, minRun int) (int, int, bool) {
 	l := at
 	for l > 0 && isPrintable(buf[l-1]) {
 		l--
@@ -398,7 +406,33 @@ func inTextRun(buf []byte, at, tokLen int) bool {
 	for r < len(buf) && isPrintable(buf[r]) {
 		r++
 	}
-	return r-l >= minRun
+	return l, r, r-l >= minRun
+}
+
+func isShortTag(pat []byte) bool {
+	return string(pat) == "<?=" || string(pat) == "<%"
+}
+
+var shortTagPayloads = [][]byte{
+	[]byte("`"),
+	[]byte("$_get"), []byte("$_post"), []byte("$_request"),
+	[]byte("$_cookie"), []byte("$_files"), []byte("$_server"),
+	[]byte("system("), []byte("eval("), []byte("exec("),
+	[]byte("passthru"), []byte("shell_exec"), []byte("assert("),
+	[]byte("base64_decode"), []byte("gzinflate"), []byte("str_rot13"),
+	[]byte("popen("), []byte("proc_open("), []byte("cmd.exe"),
+	[]byte("/bin/sh"), []byte("phpinfo"), []byte("include("),
+	[]byte("require("), []byte("move_uploaded_file"),
+	[]byte("file_put_contents"), []byte("file_get_contents"),
+}
+
+func runHasPayload(lower []byte) bool {
+	for _, kw := range shortTagPayloads {
+		if bytes.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
 }
 
 func isPrintable(b byte) bool {
