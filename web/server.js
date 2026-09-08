@@ -22,7 +22,7 @@ function safeName(name) {
 const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/api/upload') {
     const fname = safeName(req.headers['x-filename']);
-    const tmp = path.join(os.tmpdir(), 'webupload-' + gc.randHex(8));
+    const tmp = path.join(os.tmpdir(), 'webupload-' + gc.randHex(8) + '-' + fname);
     const ws = fs.createWriteStream(tmp);
     req.pipe(ws);
     ws.on('finish', () => {
