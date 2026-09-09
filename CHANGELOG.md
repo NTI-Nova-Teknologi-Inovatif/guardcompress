@@ -4,6 +4,16 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/).
 
 ## [Unreleased]
 
+### Diperbaiki
+- Webshell short-tag (`<?=`, `<%`) dalam run teks pendek kini tertangkap
+  bila satu run berisi keyword payload (tutup lolos shell segmen COM JPEG).
+- Isi chunk teks PNG terkompres (zTXt/iTXt) dibuka + dipindai.
+- Demo web: nama file asli dipertahankan di tmp agar aturan nama core jalan.
+
+### Diubah
+- Wrapper dipecah jadi struktur SDK multi-file (node/php/python/go),
+  API tetap sama. Exception PHP satu class satu file (PSR-4 penuh).
+
 ## [0.1.0] — 2026-09-08 (rencana rilis pertama)
 
 ### Ditambahkan

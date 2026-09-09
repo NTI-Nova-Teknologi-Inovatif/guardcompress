@@ -112,20 +112,48 @@ kirim ringkasannya saja.
 ## Isi repo
 
 ```
-core/               # inti Go, jadi satu binary CLI
-  main.go           # perintah: check | verify | doctor | init
-  internal/guard/   # cek format + scan
-  internal/compress/# bungkus ffmpeg
-  rules/            # aturan YARA (dipakai penuh di v2)
+core/                       # inti Go, jadi satu binary CLI
+  main.go                   # perintah: check | verify | doctor | init
+  internal/guard/           # cek format + scan (guard, pngtext, containers,
+                            # naming, clamav + guard_test.go)
+  internal/compress/        # bungkus ffmpeg
+  internal/slots/           # admission lintas-proses (anti-down)
+  rules/                    # aturan YARA (dipakai penuh di v2)
 wrappers/
-  php/              # composer: guardcompress/php
-  node/             # npm: guardcompress
-  python/           # pip: guardcompress
-  go/               # SDK go
-docs/               # ARCHITECTURE, CONFIG, CONTRACT, FFMPEG, RELEASE, FAQ, COMPARISON, GLOSSARY
-examples/           # contoh queue Laravel / BullMQ / Celery
-web/                # demo upload (contoh, bukan produksi)
+  php/                      # composer: guardcompress/php
+    src/GuardCompress.php   # fasad (process/image/video/audio/batch/cleanup)
+    src/Client.php          # mesin proc_open + resolveBinary
+    src/Batch.php           # batch sekuensial + paralel
+    src/GuardResult.php     # hasil + getter byte
+    src/GuardException.php, src/InfectedFileException.php,
+    src/BusyException.php   # exception per sinyal (PSR-4)
+    bin/install-binary.php  # unduh binary + ffmpeg
+  node/                     # npm: guardcompress
+    src/client.js           # processFile(+Async), resolveBinary, cleanup
+    src/batch.js            # batch sekuensial + paralel
+    src/presets.js          # image/video/audio
+    src/index.js            # re-ekspor publik
+    scripts/postinstall.js  # unduh binary + ffmpeg
+  python/                   # pip: guardcompress
+    src/guardcompress/client.py    # process + resolveBinary + cleanup
+    src/guardcompress/batch.py     # batch (+paralel ThreadPool)
+    src/guardcompress/presets.py   # image/video/audio
+    src/guardcompress/errors.py    # BlockedError, BusyError
+    src/guardcompress/install.py   # unduh binary + ffmpeg
+  go/                       # SDK go
+    client.go               # Process + Result
+    batch.go                # Batch + IsBlocked/IsBusy
+    presets.go              # Image/Video/Audio
+docs/                       # ARCHITECTURE, CONFIG, CONTRACT, FFMPEG, RELEASE,
+                            # FILE-TYPES, THREATS, FAQ, COMPARISON, GLOSSARY
+examples/                   # contoh queue Laravel / BullMQ / Celery
+web/                        # demo upload (contoh, bukan produksi)
 ```
+
+## Jenis file & ancaman
+
+Matriks lengkap: `docs/FILE-TYPES.md` (ekstensi → magic → output).
+Daftar serangan yang terbukti tertangkap: `docs/THREATS.md`.
 
 ## Repo (multi-repo, mono-sumber)
 

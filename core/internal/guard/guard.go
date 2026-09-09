@@ -231,6 +231,14 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		return res, nil
 	}
 
+	if reason, token := scanPNGText(f, res.Size); reason != "" {
+		res.Reason = reason
+		if token != "" {
+			res.Details["token"] = token
+		}
+		return res, nil
+	}
+
 	if v, ok := cfg["block_embedded_containers"].(bool); !ok || v {
 		if found := scanContainers(f, res.Size); found != "" {
 			res.Reason = found
@@ -330,19 +338,8 @@ func streamScan(f *os.File, size int64) (string, string) {
 		window := make([]byte, 0, len(prev)+len(chunk))
 		window = append(window, prev...)
 		window = append(window, chunk...)
-		lowered := asciiLower(window)
-		for _, tok := range suspiciousTokens {
-			hay := window
-			if tok.fold {
-				hay = lowered
-			}
-			if foundAt(hay, window, tok.pat) {
-				shown := string(tok.pat)
-				if len(shown) > 24 {
-					shown = shown[:24] + "..."
-				}
-				return "suspicious token detected: " + shown, shown
-			}
+		if reason, token := matchTokens(window); reason != "" {
+			return reason, token
 		}
 		if len(window) > overlap {
 			prev = append(prev[:0], window[len(window)-overlap:]...)

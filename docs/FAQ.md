@@ -53,6 +53,14 @@ Jangan di request HTTP langsung — lempar ke queue (`examples/`) dengan
 `guardcompress verify --in <file> --expect-sha256 <sidik>` — hash beda =
 berubah setelah lolos = blocked. Jalankan berkala via cron/queue.
 
+**File PNG/JPG murni tapi ada data tersembunyi kok lolos?**
+Tergantung datanya. Metadata/teks jinak (EXIF, komentar, `tEXt` biasa)
+memang diloloskan — semua foto asli membawanya, memblokirnya berarti
+memblokir internet. Yang ditolak: pola serangan di mana saja (webshell
+di ekor file, segmen COM JPEG, chunk teks PNG biasa maupun terkompres
+zTXt/iTXt, ekstensi ganda eksekusi). Daftar lengkap yang terbukti
+tertangkap: `docs/THREATS.md`.
+
 ## Lisensi & rilis
 
 **Boleh dipakai komersial?**
