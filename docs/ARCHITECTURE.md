@@ -11,7 +11,9 @@
 Upload tmp (terisolasi, tak pernah langsung ke storage)
   -> exec guardcompress check
     -> guard.Scan() di file isolasi
+    -> nama reserved Windows? -> netralkan (file_CON)
     -> DITOLAK? -> karantina opsional (quarantine_dir, default: buang) + exit 2
+    -> SVG? -> sanitasi allowlist (script/on*/DOCTYPE dibuang) -> lanjut
     -> compress.Run() -> sniff ULANG output (keluarga format harus sama)
     -> sidik sha256 output -> report.json + file bersih
   -> app simpan file + sha256 ke DB/S3, hapus tmp
@@ -22,6 +24,13 @@ Upload tmp (terisolasi, tak pernah langsung ke storage)
 ```
 Aturan: file yang lolos pun TERUS diawasi — setiap perubahan format/isi
 terdeteksi saat verify berkala (cron/queue).
+
+Deteksi berlapis di guard.Scan (berhenti di temuan pertama):
+`nama eksekusi -> token stream (1MB chunk + overlap 4KB) ->
+tag-pendek+payload (<?=/<% + keyword, min-run 12) -> chunk teks PNG
+(zTXt/iTXt dibuka, cap 8MB) -> pixel flood (max_pixels) ->
+container tertanam -> ClamAV (bila ada) -> VirusTotal (bila ada kunci)
+-> allowlist MIME`.
 
 ## 2b. Struktur output (gampang dicek manual)
 ```
@@ -37,8 +46,10 @@ Contoh: `evil.mp4.php` -> `evil_mp4_php.mp4`, `../../etc/passwd` -> `passwd.bin`
 | Komponen | Strategi v1 | Roadmap v2 |
 |---|---|---|
 | FFmpeg | static build per OS/arch, lazy-download ke `~/.cache/guardcompress`, SHA verify, `GUARDCOMPRESS_FFMPEG` | campur `go:embed` untuk 1 platform populer |
-| Malware DB | heuristic + `rules/*.yar` placeholder | `yara-x` Go binding + `go:embed rules/` + auto-update via rilis binary |
+| Malware DB | heuristic bawaan + `rules/*.yar` sebagai spesifikasi cermin 1:1 | `yara-x` Go binding + `go:embed rules/` + auto-update via rilis binary |
 | ClamAV | opsional hook `clamdscan` bila ada | - |
+| VirusTotal | opsional cek hash SHA256 bila `virustotal_api_key` diisi | - |
+| SVG | sanitizer Go stdlib sendiri (rujukan desain: DOMPurify/Cure53) | - |
 
 ## 4. Matrix rilis
 `linux-amd64, linux-arm64, windows-amd64, darwin-arm64` via `.github/workflows/release.yml`.
@@ -71,6 +82,7 @@ Rem berlapis (lihat `doctor`: `cpu_count`, `recommended_jobs`):
 | Slot admission | semafor file lintas-proses (`internal/slots`, tanpa daemon): default = jumlah CPU, penuh → `busy` (HTTP 429). Lock yatim dibersihkan otomatis (15 mnt). `max_slots: 0` = tanpa batas |
 | Waktu per job | timeout core 100s < wrapper 120s (hang = error, bukan gantung) |
 | Ukuran per file | `max_mb` default 500 (lebih = blocked sebelum dibaca) |
+| Pixel per gambar | `max_pixels` default 100MP (flood = blocked, tanpa alokasi pixel) |
 | Paralel per request | `jobs` default 1; naikkan maks `recommended_jobs` (= CPU/2) |
 | Paralel antar worker | contoh queue dibatasi (`concurrency: 2`, `--concurrency=2`, Horizon maxProcesses) |
 | Video berat | wajib lewat queue (`examples/`), jangan di request HTTP langsung |
