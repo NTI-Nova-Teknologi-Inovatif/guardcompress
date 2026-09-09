@@ -13,7 +13,7 @@ ada di satu binary Go; wrapper hanya pemanggil tipis.
 
 **Apakah menggantikan antivirus server?**
 Tidak. Ini satu lapis pertahanan di titik upload. Tetap pakai AV,
-firewall, dan hardening. Lihat `SECURITY.md`.
+firewall, dan hardening. Lihat `.github/SECURITY.md`.
 
 **Apakah data saya dikirim ke mana-mana?**
 Tidak — kecuali kamu NYALAKAN hook VirusTotal (`virustotal_api_key`).
@@ -66,9 +66,9 @@ tertangkap: `docs/THREATS.md`.
 ## Lisensi & rilis
 
 **Boleh dipakai komersial?**
-Boleh — MIT. Lihat `LICENSE` dan `THIRD-PARTY-NOTICES.md` (khusus
+Boleh — MIT. Lihat `LICENSE` dan `docs/THIRD-PARTY-NOTICES.md` (khusus
 redistribusi binary FFmpeg: wajib varian LGPL + atribusi).
 
 **Di mana lapor bug / celah?**
 Bug biasa: issue GitHub. Celah keamanan: privat ke maintainer
-(`SECURITY.md`) — jangan issue publik.
+(`.github/SECURITY.md`) — jangan issue publik.

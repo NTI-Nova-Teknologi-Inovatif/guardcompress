@@ -179,18 +179,18 @@ otomatis (`.github/workflows/subtree.yml`).
   liriknya mengandung kata `eval(`). Itu disengaja.
 - Tidak ada scanner yang janji 100% — termasuk kami. Batas yang diakui ada
   di `docs/ARCHITECTURE.md` §5–§6.
-- Lapor celah privat, bukan issue publik — lihat `SECURITY.md`.
+- Lapor celah privat, bukan issue publik — lihat `.github/SECURITY.md`.
 - Berjalan 100% lokal: tanpa telemetri, tanpa upload sampel ke pihak ketiga.
 
 ## Lisensi & hukum
 
 - Kode: **MIT** (`LICENSE`).
 - FFmpeg binary: redistribusi wajib LGPL + atribusi + `COPYING.LGPLv2.1`
-  (lihat `THIRD-PARTY-NOTICES.md`, `docs/FFMPEG.md`).
+  (lihat `docs/THIRD-PARTY-NOTICES.md`, `docs/FFMPEG.md`).
 - ClamAV: tidak dibundel, ikut lisensi instalasi user.
 - Nol dependensi npm/composer/pip pihak ketiga — semua stdlib.
-- Panduan rilis & kebijakan: `docs/RELEASE.md`, `SECURITY.md`,
-  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`.
+- Panduan rilis & kebijakan: `docs/RELEASE.md`, `.github/SECURITY.md`,
+  `.github/CONTRIBUTING.md`, `.github/CODE_OF_CONDUCT.md`.
 
 ## Coba-coba (dev)
 

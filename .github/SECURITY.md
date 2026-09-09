@@ -29,7 +29,7 @@ upgrade.
 - Kelemahan ffmpeg/ClamAV upstream (laporkan ke mereka, kami update build).
 - Social engineering, phishing, kredensial bocor.
 - Klaim "lolos 100% malware" — tidak ada scanner yang bisa janji itu,
-  termasuk kami. Lihat batas yang diakui di `docs/ARCHITECTURE.md` §5–§6.
+  termasuk kami. Lihat batas yang diakui di `../docs/ARCHITECTURE.md` §5–§6.
 
 ## Privasi
 

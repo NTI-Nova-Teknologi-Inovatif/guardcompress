@@ -20,9 +20,9 @@
 ## Ketentuan hukum
 
 - Kode GuardCompress: **MIT** (file `LICENSE`).
-- FFmpeg: binary redistribusi harus varian **LGPL** saja + atribusi + `COPYING.LGPLv2.1` + link source. Lihat `THIRD-PARTY-NOTICES.md` dan `docs/FFMPEG.md`.
+- FFmpeg: binary redistribusi harus varian **LGPL** saja + atribusi + `COPYING.LGPLv2.1` + link source. Lihat `docs/THIRD-PARTY-NOTICES.md` dan `docs/FFMPEG.md`.
 - ClamAV: tidak dibundel, lisensi ikut instalasi user.
 - Go stdlib: BSD-style, tidak menular.
 - Tidak ada dependensi npm/composer/pip pihak ketiga — semua wrapper stdlib-only.
-- Kontribusi dirilis di bawah MIT (lihat `CONTRIBUTING.md`).
-- Celah keamanan: lihat `SECURITY.md` (responsible disclosure, safe harbor).
+- Kontribusi dirilis di bawah MIT (lihat `.github/CONTRIBUTING.md`).
+- Celah keamanan: lihat `.github/SECURITY.md` (responsible disclosure, safe harbor).

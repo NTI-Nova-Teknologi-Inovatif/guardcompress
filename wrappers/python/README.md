@@ -44,4 +44,4 @@ Env: `GUARDCOMPRESS_BIN`, `GUARDCOMPRESS_FFMPEG`, `GUARDCOMPRESS_CACHE`.
 
 Detail kontrak, config, dan keamanan: repo utama
 [guardcompress](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress)
-(`docs/CONTRACT.md`, `docs/CONFIG.md`, `SECURITY.md`). Lisensi MIT.
+(dokumen: [CONTRACT](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/blob/main/docs/CONTRACT.md), [CONFIG](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/blob/main/docs/CONFIG.md), [SECURITY](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/blob/main/.github/SECURITY.md)). Lisensi MIT.
