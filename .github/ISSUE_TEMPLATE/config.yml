@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Lapor celah keamanan (PRIVAT)
+    url: https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/blob/main/.github/SECURITY.md
+    about: Jangan buka issue publik untuk celah keamanan.
