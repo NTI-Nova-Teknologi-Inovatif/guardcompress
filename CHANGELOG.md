@@ -14,6 +14,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/).
 - Wrapper dipecah jadi struktur SDK multi-file (node/php/python/go),
   API tetap sama. Exception PHP satu class satu file (PSR-4 penuh).
 
+## [0.1.1] — 2026-09-09
+
+### Diperbaiki
+- CI rilis: izin publish + build dari folder core.
+- Subtree split: 1 secret `SPLIT_PAT` (matrix) + full history.
+- Struktur dokumen: kebijakan ke `.github/`, notices ke `docs/`.
+
 ## [0.1.0] — 2026-09-09 (rilis pertama, GitHub saja)
 
 Binary inti 4 platform + CHECKSUMS di GitHub Releases. Registry npm /
