@@ -5,8 +5,11 @@ import (
 	"compress/zlib"
 	"encoding/binary"
 	"hash/crc32"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -125,5 +128,42 @@ func TestHarmlessHiddenTextClean(t *testing.T) {
 	}
 	if res.Reason != "" {
 		t.Fatal("teks jinak ikut diblokir: " + res.Reason)
+	}
+}
+
+func TestVirusTotalHook(t *testing.T) {
+	malicious := `{"data":{"attributes":{"last_analysis_stats":{"malicious":5,"suspicious":0}}}}`
+	clean := `{"data":{"attributes":{"last_analysis_stats":{"malicious":0,"suspicious":0}}}}`
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		if r.Header.Get("x-apikey") != "kunci" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "mal") {
+			w.Write([]byte(malicious))
+			return
+		}
+		w.Write([]byte(clean))
+	}))
+	defer srv.Close()
+
+	if sig, err := virustotalLookup(srv.URL, "kunci", "abc"); err != nil || sig != "" {
+		t.Fatal("hash bersih harus lolos")
+	}
+	if sig, err := virustotalLookup(srv.URL, "kunci", "mal"); err != nil || sig == "" {
+		t.Fatal("hash jahat harus diblokir")
+	}
+	if _, err := virustotalLookup(srv.URL, "salah", "abc"); err == nil {
+		t.Fatal("kunci salah harus error")
+	}
+	if hits != 3 {
+		t.Fatal("jumlah request tak sesuai")
+	}
+
+	p := writeTemp(t, "vt.png", []byte("\x89PNG\r\n\x1a\n"))
+	if _, used, _ := scanVirusTotal(p, map[string]any{}); used {
+		t.Fatal("tanpa kunci harus diam")
 	}
 }

@@ -1,0 +1,14 @@
+# Pembanding lapis kedua: pindai folder sampel dengan ClamAV resmi (manual).
+# Integrasi OTOMATIS GuardCompress butuh binary clamdscan/clamscan di host
+# yang sama (config "clamav": "auto" — diam bila tak ada). File ini hanya
+# untuk cek silang manual bila host tidak punya ClamAV:
+#
+#   mkdir -p examples/samples && cp file-uji examples/samples/
+#   docker compose -f examples/clamav.yml run --rm clamscan
+services:
+  clamscan:
+    image: clamav/clamav:stable
+    container_name: gc-clamscan
+    volumes:
+      - ./samples:/samples:ro
+    command: ["clamscan", "-r", "--no-summary", "/samples"]

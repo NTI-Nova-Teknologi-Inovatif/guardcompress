@@ -19,7 +19,7 @@ binary inti Go — tanpa dependensi pip.
 
 ```bash
 pip install git+https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git
-python -m guardcompress.install   # unduh binary + ffmpeg (sekali saja)
+python -m guardcompress.install   # unduh binary (sekali saja; ffmpeg menyusul)
 ```
 
 ## Pakai

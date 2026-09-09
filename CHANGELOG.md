@@ -14,7 +14,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/).
 - Wrapper dipecah jadi struktur SDK multi-file (node/php/python/go),
   API tetap sama. Exception PHP satu class satu file (PSR-4 penuh).
 
-## [0.1.0] — 2026-09-08 (rencana rilis pertama)
+## [0.1.0] — 2026-09-09 (rilis pertama, GitHub saja)
+
+Binary inti 4 platform + CHECKSUMS di GitHub Releases. Registry npm /
+Packagist / PyPI belum. FFmpeg belum dibundel (mode guard-only).
 
 ### Ditambahkan
 - Core Go: `check | verify | doctor | init`, exit `0/2/1` + `report.json`.

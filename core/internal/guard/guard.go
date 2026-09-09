@@ -257,6 +257,16 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		}
 	}
 
+	if sig, used, err := scanVirusTotal(path, cfg); err != nil {
+		return res, err
+	} else if used {
+		res.Details["virustotal"] = sig
+		if sig != "" {
+			res.Reason = sig
+			return res, nil
+		}
+	}
+
 	allow, err := resolveAllow(cfg)
 	if err != nil {
 		return res, err

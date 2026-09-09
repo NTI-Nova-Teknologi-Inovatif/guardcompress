@@ -16,7 +16,9 @@ Tidak. Ini satu lapis pertahanan di titik upload. Tetap pakai AV,
 firewall, dan hardening. Lihat `SECURITY.md`.
 
 **Apakah data saya dikirim ke mana-mana?**
-Tidak. 100% lokal, tanpa telemetri, tanpa upload sampel.
+Tidak — kecuali kamu NYALAKAN hook VirusTotal (`virustotal_api_key`).
+Itu pun yang keluar hanya SHA256 file (untuk tanya reputasi hash),
+bukan isi file. Tanpa kunci API: 100% lokal, tanpa telemetri.
 
 ## Instalasi
 

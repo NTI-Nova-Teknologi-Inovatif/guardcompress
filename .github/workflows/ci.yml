@@ -1,0 +1,26 @@
+name: ci
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.22" }
+      - run: gofmt -l core/ wrappers/go/
+      - run: go vet ./...
+        working-directory: core
+      - run: go test ./...
+        working-directory: core
+  wrappers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node --check wrappers/node/src/index.js && node --check wrappers/node/src/client.js && node --check wrappers/node/src/batch.js && node --check wrappers/node/src/presets.js && node --check wrappers/node/scripts/postinstall.js
+      - run: python3 -m py_compile wrappers/python/src/guardcompress/*.py
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: "8.2" }
+      - run: for f in wrappers/php/src/*.php wrappers/php/bin/*.php; do php -l "$f"; done

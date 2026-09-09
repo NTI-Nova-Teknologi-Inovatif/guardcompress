@@ -18,7 +18,7 @@ binary inti Go — tanpa dependensi composer.
 ```bash
 composer require guardcompress/php:dev-main \
   --repository='{"type":"vcs","url":"https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-php"}'
-php bin/install-binary.php v0.1.0   # unduh binary yang cocok (sekali saja)
+php bin/install-binary.php v0.1.0   # unduh binary yang cocok (sekali saja; ffmpeg menyusul)
 ```
 
 ## Pakai

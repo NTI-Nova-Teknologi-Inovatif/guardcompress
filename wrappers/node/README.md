@@ -19,7 +19,7 @@ binary inti Go — tanpa dependensi npm.
 
 ```bash
 npm install NTI-Nova-Teknologi-Inovatif/guardcompress-js
-# binary + ffmpeg otomatis terunduh saat install (postinstall).
+# binary otomatis terunduh saat install (ffmpeg menyusul; sementara mode guard-only).
 # Belum ada rilis? installer diam — mode guard-only, tanpa gagalkan install.
 ```
 

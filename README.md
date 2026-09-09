@@ -121,7 +121,7 @@ core/                       # inti Go, jadi satu binary CLI
                             # naming, clamav + guard_test.go)
   internal/compress/        # bungkus ffmpeg
   internal/slots/           # admission lintas-proses (anti-down)
-  rules/                    # aturan YARA (dipakai penuh di v2)
+  rules/                    # spesifikasi pola (cermin 1:1 mesin bawaan; binding yara-x di v2)
 wrappers/
   php/                      # composer: guardcompress/php
     src/GuardCompress.php   # fasad (process/image/video/audio/batch/cleanup)
