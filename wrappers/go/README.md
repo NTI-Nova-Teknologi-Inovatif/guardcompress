@@ -1,6 +1,6 @@
 # GuardCompress for Go
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../../LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Keamanan + kompresi upload untuk `net/http`, Gin, Echo. SDK Go di atas
 binary inti — tanpa dependensi modul.

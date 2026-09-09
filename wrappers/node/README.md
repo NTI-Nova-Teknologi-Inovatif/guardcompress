@@ -1,6 +1,6 @@
 # GuardCompress for Node.js
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../../LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Keamanan + kompresi upload untuk Express/Fastify/Nest. Thin wrapper di atas
 binary inti Go — tanpa dependensi npm.

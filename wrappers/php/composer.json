@@ -1,8 +1,11 @@
 {
     "name": "guardcompress/php",
-    "description": "GuardCompress PHP wrapper (Laravel/WordPress) - thin wrapper over Go single-binary core.",
+    "description": "Keamanan + kompresi upload untuk PHP (Laravel/WordPress). Binary inti Go + ffmpeg otomatis terunduh saat install.",
     "type": "library",
     "license": "MIT",
+    "keywords": ["upload", "security", "antivirus", "webshell", "image-compression", "ffmpeg", "laravel", "wordpress"],
+    "authors": [{ "name": "NTI (Nova Teknologi Inovatif)" }],
+    "support": { "issues": "https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/issues" },
     "require": { "php": ">=8.0" },
     "autoload": { "psr-4": { "GuardCompress\\": "src/" } },
     "scripts": {

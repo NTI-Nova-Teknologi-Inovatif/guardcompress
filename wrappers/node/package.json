@@ -1,9 +1,21 @@
 {
   "name": "guardcompress",
   "version": "0.1.0",
-  "description": "GuardCompress Node wrapper - thin wrapper over Go single-binary core",
+  "description": "Keamanan + kompresi upload untuk Node.js (Express/Fastify/Nest). Binary inti Go + ffmpeg otomatis terunduh saat install.",
   "main": "src/index.js",
+  "files": ["src/", "scripts/", "README.md", "LICENSE"],
+  "keywords": ["upload", "security", "antivirus", "webshell", "image-compression", "ffmpeg", "express", "middleware"],
+  "author": "NTI (Nova Teknologi Inovatif)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/issues"
+  },
+  "homepage": "https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress#readme",
+  "engines": { "node": ">=18" },
   "scripts": {
     "postinstall": "node scripts/postinstall.js"
   }

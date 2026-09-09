@@ -1,6 +1,6 @@
 # GuardCompress for Python
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../../LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Keamanan + kompresi upload untuk Django/Flask/FastAPI. Thin wrapper di atas
 binary inti Go — tanpa dependensi pip.
