@@ -1,82 +1,69 @@
-# GuardCompress
+# 🛡️ GuardCompress
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/NTI-Nova-Teknologi-Inovatif/guardcompress)](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/releases)
+[![CI](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/actions/workflows/ci.yml/badge.svg)](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/actions/workflows/ci.yml)
+[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](core/)
 
-Middleware keamanan + kompresi media yang nempel langsung di kode web.
-Buat developer, bukan end-user. Satu binary Go, tanpa daemon, tanpa Docker.
+**Upload file tanpa cemas.** Setiap file diperiksa isinya (bukan ekstensinya),
+dipindai webshell, lalu media dikompresi ulang — dalam **satu panggilan**,
+langsung di kode web kamu. Tanpa daemon. Tanpa Docker. Tanpa dependensi.
 
-## Masalahnya
-
-Form upload adalah pintu masuk favorit penyerang: `shell.php` yang diganti
-nama jadi `foto.png`, webshell yang ditempel di ekor gambar valid, file
-zip/HTML yang menyamar jadi media. Validasi ekstensi tidak cukup —
-GuardCompress memeriksa **isi asli file** (magic numbers), memindai pola
-berbahaya, lalu mengompresi ulang media lewat FFmpeg sehingga file yang
-disimpan adalah hasil render ulang yang bersih.
-
-**Alur:** `Upload -> Guard (cek format asli + scan) -> Compress (FFmpeg) -> balik ke web`
-
-```
-[PHP/Node/Python/Go] --exec--> [guardcompress binary (Go)] --call--> [ffmpeg static]
-        ^                                  |
-        |----------- report.json -----------+
+```php
+$r = GuardCompress::process($upload, ['max_mb' => 500]);  // bersih? simpan. jahat? 422.
 ```
 
-## Fitur
+## ⚡ Coba 30 detik
 
-- **Deteksi format asli** — magic numbers, bukan ekstensi. `evil.mp4.php` ketahuan.
-- **Pindai webshell & skrip** — tag `<?php`/`<%`/`<script>`, `eval`, `base64_decode`,
-  `shell_exec`, perintah `cmd.exe`/`/bin/sh`, marker `c99shell`, string EICAR.
-- **Fail-closed** — ragu sedikit = tolak. Lebih baik false positive daripada lolos.
-- **Sanitasi nama file** — `../../etc/passwd` jadi `passwd.bin`, ekstensi selalu dari MIME asli.
-- **Kompresi ulang** — gambar/video/audio diperkecil via FFmpeg static (lazy-download + verifikasi SHA).
-- **Isolasi** — kerja di folder tmp unik (0700), tanpa shell, tanpa jaringan, tmp dibersihkan otomatis.
-- **Verifikasi simpanan** — `verify` memastikan file di storage tidak diubah setelah lolos.
-- **Karantina opsional + hook ClamAV** bila `clamdscan` tersedia di server.
-- **Nol dependensi** — core Go stdlib-only; semua wrapper stdlib-only.
+```powershell
+# 1. Ambil binary (Windows; Linux/macOS/darwin ada di Releases)
+Invoke-WebRequest https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/releases/download/v0.1.2/guardcompress-windows-amd64.exe -OutFile gc.exe
+# 2. Cek file
+.\gc.exe check --in foto.png --out-dir ./out --json
+# exit 0 = bersih | exit 2 = diblokir | exit 1 = error
+```
 
-## Instalasi
+## ✨ Kenapa GuardCompress?
 
-> **Status rilis: hanya GitHub** (v0.1.0 + binary). Registry npm /
-> Packagist / PyPI **belum dirilis** — perintah di bawah memakai GitHub
-> langsung dan sudah terbukti jalan.
+| Serangan nyata | GuardCompress |
+|---|---|
+| `shell.php` diganti nama `foto.png` | ❌ Tolak — isi dibaca via magic numbers, bukan nama |
+| Webshell ditempel di ekor gambar | ❌ Tolak — pindai token (`<?php`, `eval(`, `c99shell`, ...) |
+| Shell di komentar JPEG / chunk PNG terkompres | ❌ Tolak — segmen COM + zTXt/iTXt dibuka & dipindai |
+| `foto.jpg.php` (nama menipu) | ❌ Tolak — aturan ekstensi eksekusi |
+| Foto 8MB untuk avatar 100px | ✅ Kompres otomatis via FFmpeg |
+| `../../etc/passwd` sebagai nama file | ✅ Disanitasi jadi `passwd.bin` |
+
+Daftar lengkap yang terbukti tertangkap: [`docs/THREATS.md`](docs/THREATS.md).
+
+## 📦 Instalasi
+
+> **Status: hanya GitHub** (binary v0.1.2 ✅ · FFmpeg menyusul · npm/Packagist/PyPI belum).
 
 | Bahasa | Perintah |
 |---|---|
-| PHP | composer via VCS `NTI-Nova-Teknologi-Inovatif/guardcompress-php`, lalu `php bin/install-binary.php` |
+| PHP | composer via VCS [`guardcompress-php`](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-php) + `php bin/install-binary.php` |
 | Node | `npm install NTI-Nova-Teknologi-Inovatif/guardcompress-js` |
-| Python | `pip install git+https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git`, lalu `python -m guardcompress.install` |
+| Python | `pip install git+https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git` + `python -m guardcompress.install` |
 | Go | `go get github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go` |
 
-Binary inti otomatis terunduh + verifikasi SHA dari GitHub Releases.
-FFmpeg menyusul (mode guard-only sementara).
+Binary inti terunduh + verifikasi SHA otomatis. Detail per bahasa ada di
+README masing-masing repo.
 
-```bash
-php bin/install-binary.php v0.1.0   # PHP, sekali saja
-```
-
-Env: `GUARDCOMPRESS_BIN` (path binary), `GUARDCOMPRESS_FFMPEG` (path ffmpeg).
-
-## Contoh pakai
+## 🔌 Pakai (4 bahasa, pola sama)
 
 ```php
-// Laravel
-use GuardCompress\GuardCompress;
+// Laravel — tangkap 2 exception, selesai
 try {
     $r = GuardCompress::process($request->file('video')->getRealPath(), ['max_mb' => 500]);
     Storage::putFile('media', new File($r->path));
-} catch (\GuardCompress\InfectedFileException $e) {
-    return response()->json(['blocked' => $e->getMessage()], 422);
-}
+} catch (\GuardCompress\InfectedFileException $e) { return response()->json(['blocked' => $e->getMessage()], 422); }
 ```
 
 ```js
-// Node.js / Express
-const gc = require('guardcompress');
+// Express — tangkap 2 kode, selesai
 try {
   const { path } = gc.processFile(req.file.path, { max_mb: 500 });
-  // simpan path ke storage
 } catch (e) {
   if (e.code === 'BLOCKED') return res.status(422).json({ blocked: e.message });
   if (e.code === 'BUSY') return res.status(429).json({ retry: true });
@@ -85,8 +72,7 @@ try {
 ```
 
 ```python
-# Django / Flask
-from guardcompress import process, BlockedError
+# Django/Flask
 try:
     r = process(tmp_path, {"max_mb": 500})
 except BlockedError as e:
@@ -94,125 +80,62 @@ except BlockedError as e:
 ```
 
 ```go
-// Go net/http
-import gc "github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go"
+// net/http
 res, err := gc.Process(tmpPath, map[string]any{"max_mb": 500})
+if gc.IsBlocked(err) { /* 422 */ }
 ```
 
-Contoh antrean (Laravel job / BullMQ / Celery) ada di `examples/`.
+Contoh antrean (Laravel job / BullMQ / Celery): [`examples/`](examples/).
 
-## Hasil (verdicts)
-
-| Exit | Artinya | Aksi app |
-|---|---|---|
-| `0` | bersih, file + `report.json` di out-dir | simpan + catat sha256 |
-| `2` | **diblokir** + alasan | tolak (HTTP 422), opsional karantina |
-| `1` | error / server penuh (`busy`) | coba lagi (HTTP 429 + retry) |
-
-`report.json` berisi path server — jangan kirim mentah ke browser,
-kirim ringkasannya saja.
-
-## Isi repo
+## 🧠 Cara kerja
 
 ```
-core/                       # inti Go, jadi satu binary CLI
-  main.go                   # perintah: check | verify | doctor | init
-  internal/guard/           # cek format + scan (guard, pngtext, containers,
-                            # naming, clamav + guard_test.go)
-  internal/compress/        # bungkus ffmpeg
-  internal/slots/           # admission lintas-proses (anti-down)
-  rules/                    # spesifikasi pola (cermin 1:1 mesin bawaan; binding yara-x di v2)
-wrappers/
-  php/                      # composer: guardcompress/php
-    src/GuardCompress.php   # fasad (process/image/video/audio/batch/cleanup)
-    src/Client.php          # mesin proc_open + resolveBinary
-    src/Batch.php           # batch sekuensial + paralel
-    src/GuardResult.php     # hasil + getter byte
-    src/GuardException.php, src/InfectedFileException.php,
-    src/BusyException.php   # exception per sinyal (PSR-4)
-    bin/install-binary.php  # unduh binary + ffmpeg
-  node/                     # npm: guardcompress
-    src/client.js           # processFile(+Async), resolveBinary, cleanup
-    src/batch.js            # batch sekuensial + paralel
-    src/presets.js          # image/video/audio
-    src/index.js            # re-ekspor publik
-    scripts/postinstall.js  # unduh binary + ffmpeg
-  python/                   # pip: guardcompress
-    src/guardcompress/client.py    # process + resolveBinary + cleanup
-    src/guardcompress/batch.py     # batch (+paralel ThreadPool)
-    src/guardcompress/presets.py   # image/video/audio
-    src/guardcompress/errors.py    # BlockedError, BusyError
-    src/guardcompress/install.py   # unduh binary + ffmpeg
-  go/                       # SDK go
-    client.go               # Process + Result
-    batch.go                # Batch + IsBlocked/IsBusy
-    presets.go              # Image/Video/Audio
-docs/                       # ARCHITECTURE, CONFIG, CONTRACT, FFMPEG, RELEASE,
-                            # FILE-TYPES, THREATS, FAQ, COMPARISON, GLOSSARY
-examples/                   # contoh queue Laravel / BullMQ / Celery
-web/                        # demo upload (contoh, bukan produksi)
+Upload ─▶ Guard ──────────────▶ Compress ──────▶ Web
+           │ cek format asli    │ FFmpeg         simpan + sha256
+           │ pindai webshell    │ (guard-only bila tak ada)
+           │ sanitasi nama
+           └─ jahat? TOLAK (422) + alasan
 ```
 
-## Jenis file & ancaman
+- **Fail-closed**: ragu sedikit = tolak. False positive diterima, lolos tidak.
+- **Isolasi**: folder tmp unik 0700 per proses, tanpa shell, tanpa jaringan, auto-cleanup.
+- **Terus diawasi**: `verify --expect-sha256` memastikan simpanan tak berubah.
+- **Lapis kedua (opsional)**: hook ClamAV lokal + cek reputasi hash VirusTotal.
+- Arsitektur penuh: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-Matriks lengkap: `docs/FILE-TYPES.md` (ekstensi → magic → output).
-Daftar serangan yang terbukti tertangkap: `docs/THREATS.md`.
+## 📚 Dokumen
 
-## Repo (multi-repo, mono-sumber)
+| Dokumen | Isi |
+|---|---|
+| [`docs/FILE-TYPES.md`](docs/FILE-TYPES.md) | Matriks jenis file: ekstensi → magic → output |
+| [`docs/THREATS.md`](docs/THREATS.md) | Ancaman yang terbukti tertangkap (dan yang tidak) |
+| [`docs/CONFIG.md`](docs/CONFIG.md) | Semua kenop: batas, thread, timeout, thumbs, karantina |
+| [`docs/CONTRACT.md`](docs/CONTRACT.md) | Kontrak sinyal per bahasa (jangan diubah sembarangan) |
+| [`docs/FAQ.md`](docs/FAQ.md) · [`docs/GLOSSARY.md`](docs/GLOSSARY.md) · [`docs/COMPARISON.md`](docs/COMPARISON.md) | Tanya-jawab, istilah, perbandingan |
+| [`docs/FFMPEG.md`](docs/FFMPEG.md) · [`docs/RELEASING.md`](docs/RELEASING.md) · [`docs/RELEASE.md`](docs/RELEASE.md) | Supply chain, panduan rilis, struktur repo |
 
-| Repo | Isi | Publish |
-|---|---|---|
-| `NTI-Nova-Teknologi-Inovatif/guardcompress` | full monorepo | kode sumber |
-| `NTI-Nova-Teknologi-Inovatif/guardcompress-js` | `wrappers/node/` | npm `guardcompress` |
-| `NTI-Nova-Teknologi-Inovatif/guardcompress-php` | `wrappers/php/` | Packagist `guardcompress/php` |
-| `NTI-Nova-Teknologi-Inovatif/guardcompress-python` | `wrappers/python/` | PyPI `guardcompress` |
-| `NTI-Nova-Teknologi-Inovatif/guardcompress-go` | `wrappers/go/` | `go get .../wrappers/go` |
+## 🗂️ Repo
 
-Ngoding di repo full; wrapper dibagi ke repo bahasa lewat subtree split
-otomatis (`.github/workflows/subtree.yml`).
+Ngoding di monorepo ini; 4 repo bahasa tersinkron otomatis:
 
-## Keamanan & batasan (jujur)
+| Repo | Isi |
+|---|---|
+| [`guardcompress`](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress) | full (kamu di sini) |
+| [`guardcompress-js`](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-js) → npm | [`guardcompress-php`](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-php) → Packagist |
+| [`guardcompress-python`](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python) → PyPI | [`guardcompress-go`](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go) → go get |
 
-- Satu lapis pertahanan berlapis — **bukan** pengganti antivirus enterprise,
-  firewall, pentest, atau hardening server.
-- Fail-closed: file aneh tapi jinak bisa ikut tertolak (misal MP3 yang
-  liriknya mengandung kata `eval(`). Itu disengaja.
-- Tidak ada scanner yang janji 100% — termasuk kami. Batas yang diakui ada
-  di `docs/ARCHITECTURE.md` §5–§6.
-- Lapor celah privat, bukan issue publik — lihat `.github/SECURITY.md`.
-- Berjalan 100% lokal: tanpa telemetri, tanpa upload sampel ke pihak ketiga.
+## 🔒 Keamanan & lisensi
 
-## Lisensi & hukum
+- Satu lapis pertahanan — **bukan** pengganti AV enterprise/pentest. Batas jujur di [`docs/THREATS.md`](docs/THREATS.md).
+- Lapor celah **privat** (jangan issue publik): [`.github/SECURITY.md`](.github/SECURITY.md).
+- 100% lokal, tanpa telemetri (kecuali hook VirusTotal yang kamu nyalakan sendiri).
+- Kode **MIT** ([LICENSE](LICENSE)) · FFmpeg LGPL ([docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md)) · Kontribusi: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
-- Kode: **MIT** (`LICENSE`).
-- FFmpeg binary: redistribusi wajib LGPL + atribusi + `COPYING.LGPLv2.1`
-  (lihat `docs/THIRD-PARTY-NOTICES.md`, `docs/FFMPEG.md`).
-- ClamAV: tidak dibundel, ikut lisensi instalasi user.
-- Nol dependensi npm/composer/pip pihak ketiga — semua stdlib.
-- Panduan rilis & kebijakan: `docs/RELEASE.md`, `.github/SECURITY.md`,
-  `.github/CONTRIBUTING.md`, `.github/CODE_OF_CONDUCT.md`.
-
-## Coba-coba (dev)
+## 💻 Dev lokal
 
 ```powershell
-# 1. Build core
 go build -o core/bin/guardcompress-windows-amd64.exe ./core
-# 2. Cek file
 .\core\bin\guardcompress-windows-amd64.exe check --in foto.png --out-dir ./tmp/out --json
-# 3. Cek kapasitas mesin
 .\core\bin\guardcompress-windows-amd64.exe doctor
 ```
-
-Linux/macOS tinggal ganti nama binary-nya (`guardcompress-linux-amd64` dst,
-lihat `.github/workflows/release.yml`).
-
-## Kontrak CLI
-
-```
-guardcompress check --in <path> --out-dir <dir> [--config <json>] [--json]
-exit 0 = bersih, exit 2 = diblokir, exit 1 = error
-stdout: report.json
-```
-
-Jangan ubah kontrak ini sembarangan — semua wrapper ngandalin formatnya.
-Detail ada di `docs/ARCHITECTURE.md`, daftar config di `docs/CONFIG.md`.
+Demo web: `web/` (`GUARDCOMPRESS_BIN=... node server.js` → http://localhost:8080).
