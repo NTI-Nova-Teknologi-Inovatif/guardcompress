@@ -22,8 +22,12 @@ __debug_bin*
 wrappers/node/node_modules/
 wrappers/node/dist/
 wrappers/python/dist/
+wrappers/python/build/
 wrappers/python/__pycache__/
 wrappers/python/*.egg-info/
+wrappers/python/src/*.egg-info/
+**/*.egg-info/
+build/
 wrappers/php/vendor/
 __pycache__/
 *.pyc
