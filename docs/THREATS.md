@@ -24,6 +24,8 @@ Setiap baris di bawah **terbukti tertangkap** lewat uji nyata
 | Kasus | Contoh | Status |
 |---|---|---|
 | Script tag campur huruf | `<ScRiPt>alert(1)</ScRiPt>` | tolak (case-insensitive) |
+| SVG berisi `<script>` | `<svg><script>alert(1)</script></svg>` | tolak |
+| SVG berisi event handler | `<rect onload="x()">` | **sanitasi** (atribut dibuang, bentuk utuh) |
 
 ## Penipuan nama & format
 
@@ -34,6 +36,8 @@ Setiap baris di bawah **terbukti tertangkap** lewat uji nyata
 | Arsip tertanam | ZIP di dalam file media | tolak (container scan, default on) |
 | Path traversal | `../../etc/passwd` sebagai nama | disanitasi → `passwd.bin` |
 | Symlink | input berupa symlink | tolak |
+| Nama reserved Windows | `CON.jpg`, `NUL.png`, `COM1.mp4` | dinetralkan (`file_CON.jpg`) |
+| Pixel flood | PNG 262144×262144 | tolak (`max_pixels`, default 100MP) |
 | File berubah setelah scan (TOCTOU) | ukuran/mtime berubah di tengah jalan | batal + error |
 
 ## Yang SENGAJA diloloskan (bukan ancaman)

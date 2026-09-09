@@ -31,6 +31,7 @@ Invoke-WebRequest https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/r
 | Webshell ditempel di ekor gambar | ❌ Tolak — pindai token (`<?php`, `eval(`, `c99shell`, ...) |
 | Shell di komentar JPEG / chunk PNG terkompres | ❌ Tolak — segmen COM + zTXt/iTXt dibuka & dipindai |
 | `foto.jpg.php` (nama menipu) | ❌ Tolak — aturan ekstensi eksekusi |
+| SVG ber-script (opt-in) | 🧹 Sanitasi — buang script/event-handler, bentuk utuh |
 | Foto 8MB untuk avatar 100px | ✅ Kompres otomatis via FFmpeg |
 | `../../etc/passwd` sebagai nama file | ✅ Disanitasi jadi `passwd.bin` |
 

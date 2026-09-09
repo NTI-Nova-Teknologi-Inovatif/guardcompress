@@ -131,6 +131,68 @@ func TestHarmlessHiddenTextClean(t *testing.T) {
 	}
 }
 
+func TestSVGSanitized(t *testing.T) {
+	dirty := bytes.Join([][]byte{
+		[]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">`),
+		[]byte(`<rect width="10" height="10" fill="red" ONLOAD="x()"/>`),
+		[]byte(`<scr` + `ipt>alert(1)</` + `script>`),
+		[]byte(`<g><circle cx="5" cy="5" r="4"/></g></svg>`),
+	}, nil)
+	clean, err := SanitizeSVG(dirty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(clean)
+	for _, bad := range []string{"<script", "ONLOAD", "onload", "alert"} {
+		if strings.Contains(s, bad) {
+			t.Fatalf("kotoran lolos: %s", bad)
+		}
+	}
+	for _, good := range []string{"<rect", "<circle", "viewBox"} {
+		if !strings.Contains(s, good) {
+			t.Fatalf("bentuk sah hilang: %s", good)
+		}
+	}
+}
+
+func TestSVGScriptBlocked(t *testing.T) {
+	p := writeTemp(t, "evil.svg", []byte(`<svg><scr`+`ipt>alert(1)</`+`script></svg>`))
+	res, err := Scan(p, map[string]any{"allow_ext": []any{"svg"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Reason == "" {
+		t.Fatal("svg berisi script lolos")
+	}
+}
+
+func TestSVGOnloadClean(t *testing.T) {
+	p := writeTemp(t, "mild.svg", []byte(`<svg xmlns="http://www.w3.org/2000/svg"><rect width="5" height="5" onload="x()"/></svg>`))
+	res, err := Scan(p, map[string]any{"allow_ext": []any{"svg"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Reason != "" {
+		t.Fatal("svg jinak ikut diblokir: " + res.Reason)
+	}
+}
+
+func TestPixelFloodBlocked(t *testing.T) {
+	png := bytes.Join([][]byte{
+		[]byte("\x89PNG\r\n\x1a\n"),
+		pngChunk("IHDR", []byte{0, 4, 0, 0, 0, 4, 0, 0, 8, 2, 0, 0, 0}),
+		pngChunk("IEND", nil),
+	}, nil)
+	p := writeTemp(t, "flood.png", png)
+	res, err := Scan(p, map[string]any{"allow_ext": []any{"png"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Reason == "" {
+		t.Fatal("pixel flood lolos (262144x262144)")
+	}
+}
+
 func TestVirusTotalHook(t *testing.T) {
 	malicious := `{"data":{"attributes":{"last_analysis_stats":{"malicious":5,"suspicious":0}}}}`
 	clean := `{"data":{"attributes":{"last_analysis_stats":{"malicious":0,"suspicious":0}}}}`

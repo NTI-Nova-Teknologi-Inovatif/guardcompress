@@ -13,6 +13,12 @@ setelah kompres; ekstensi output SELALU dari MIME asli, bukan nama file.
 | `webp` | `RIFF....WEBP` | `.webp` | — |
 | `gif` | `GIF87a` / `GIF89a` | `.gif` (animasi utuh) | — |
 
+## Vektor (opt-in — tidak aktif default)
+
+| Ekstensi | Magic | Output | Catatan |
+|---|---|---|---|
+| `svg` | `<svg` (setelah decl/komentar/whitespace) | `.svg` bersih | **sanitasi**: buang `<script>`, atribut `on*`, `javascript:`, `foreignObject`, DOCTYPE, komentar; atribut `href` hanya `#...`/`data:image/`; elemen `<style>` dibuang. Aktifkan via `allow_ext: ["svg"]`. XML malformed = tolak. |
+
 ## Video
 
 | Ekstensi | Magic | Output | Catatan |

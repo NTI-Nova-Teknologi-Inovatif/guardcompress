@@ -31,7 +31,22 @@ func OutputName(inPath, mime string, cfg map[string]any) string {
 	if stem == "" {
 		stem = "file"
 	}
+	if isWindowsReserved(stem) {
+		stem = "file_" + stem
+	}
 	return stem + OutExt(mime)
+}
+
+var windowsReserved = map[string]bool{
+	"con": true, "prn": true, "aux": true, "nul": true,
+	"com1": true, "com2": true, "com3": true, "com4": true, "com5": true,
+	"com6": true, "com7": true, "com8": true, "com9": true,
+	"lpt1": true, "lpt2": true, "lpt3": true, "lpt4": true, "lpt5": true,
+	"lpt6": true, "lpt7": true, "lpt8": true, "lpt9": true,
+}
+
+func isWindowsReserved(stem string) bool {
+	return windowsReserved[strings.ToLower(stem)]
 }
 
 func Sanitize(s string) string {

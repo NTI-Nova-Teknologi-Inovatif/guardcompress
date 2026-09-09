@@ -11,6 +11,7 @@ Tak diisi = default aman (diam, tidak error).
 | `allow_ext` | bawaan (jpg png webp gif mp4 mp3 ...) | extension yang diterima; ganti default bila diisi |
 | `allow` | bawaan (MIME) | versi MIME; gabung dengan `allow_ext` bila keduanya diisi |
 | `max_mb` | `500` | tolak file lebih besar sebelum dibaca |
+| `max_pixels` | `100000000` (100MP) | tolak gambar berdimensi lebih besar (pixel flood); `0` = tanpa batas |
 | `output` | `"original"` | `"uuid"` acak / `"teks kustom"` |
 
 ## Anti-down (developer yang atur sesuai servernya)

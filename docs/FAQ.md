@@ -55,6 +55,11 @@ Jangan di request HTTP langsung — lempar ke queue (`examples/`) dengan
 `guardcompress verify --in <file> --expect-sha256 <sidik>` — hash beda =
 berubah setelah lolos = blocked. Jalankan berkala via cron/queue.
 
+**SVG bisa diupload?**
+Bisa, tapi opt-in: `allow_ext: ["svg"]`. Isinya disanitasi (buang script,
+event handler, DOCTYPE) — bukan sekadar lolos. SVG ber-script berat
+langsung ditolak.
+
 **File PNG/JPG murni tapi ada data tersembunyi kok lolos?**
 Tergantung datanya. Metadata/teks jinak (EXIF, komentar, `tEXt` biasa)
 memang diloloskan — semua foto asli membawanya, memblokirnya berarti

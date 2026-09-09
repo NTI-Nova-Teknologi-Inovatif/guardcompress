@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/guardcompress/guardcompress/core/internal/guard"
 )
 
 type Result struct {
@@ -48,8 +50,29 @@ func FindFFmpeg() string {
 	return ""
 }
 
+func runSVG(inPath, outPath string) (Result, error) {
+	res := Result{Details: map[string]any{}}
+	raw, err := os.ReadFile(inPath)
+	if err != nil {
+		return res, err
+	}
+	clean, err := guard.SanitizeSVG(raw)
+	if err != nil {
+		return res, fmt.Errorf("svg rejected: %v", err)
+	}
+	if err := os.WriteFile(outPath, clean, 0o600); err != nil {
+		return res, err
+	}
+	res.NewBytes = int64(len(clean))
+	res.Details["mode"] = "svg-sanitize"
+	return res, nil
+}
+
 func Run(inPath, outPath, mime string, cfg map[string]any) (Result, error) {
 	res := Result{Details: map[string]any{}}
+	if mime == "image/svg+xml" {
+		return runSVG(inPath, outPath)
+	}
 	ff := FindFFmpeg()
 	if ff == "" {
 		if err := copyFile(inPath, outPath); err != nil {

@@ -26,7 +26,7 @@ var extByMime = map[string]string{
 	"audio/ogg": ".ogg", "application/ogg": ".ogg",
 	"audio/mp4": ".m4a", "audio/flac": ".flac",
 	"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
-	"image/gif": ".gif",
+	"image/gif": ".gif", "image/svg+xml": ".svg",
 }
 
 var defaultAllow = []string{
@@ -53,6 +53,7 @@ var extToMime = map[string][]string{
 	"webm": {"video/webm"}, "mkv": {"video/webm"}, // mkv terdeteksi EBML -> webm
 	"avi": {"video/avi"},
 	"mp3": {"audio/mpeg"},
+	"svg": {"image/svg+xml"},
 	"wav": {"audio/wave", "audio/wav"},
 	"ogg": {"application/ogg", "audio/ogg"},
 	"oga": {"application/ogg", "audio/ogg"},
@@ -104,7 +105,7 @@ func resolveAllow(cfg map[string]any) ([]string, error) {
 			}
 			m, ok := extToMime[strings.ToLower(strings.TrimPrefix(s, "."))]
 			if !ok {
-				return nil, fmt.Errorf("unknown allow_ext %q (valid: jpg jpeg png webp gif mp4 mov webm mkv avi mp3 wav ogg oga m4a flac)", s)
+				return nil, fmt.Errorf("unknown allow_ext %q (valid: jpg jpeg png webp gif svg mp4 mov webm mkv avi mp3 wav ogg oga m4a flac)", s)
 			}
 			mapped = append(mapped, m...)
 		}
@@ -231,6 +232,11 @@ func Scan(path string, cfg map[string]any) (Result, error) {
 		return res, nil
 	}
 
+	if r := checkPixels(f, res.Size, mime, cfg); r != "" {
+		res.Reason = "blocked: " + r
+		return res, nil
+	}
+
 	if reason, token := scanPNGText(f, res.Size); reason != "" {
 		res.Reason = reason
 		if token != "" {
@@ -318,6 +324,9 @@ func SniffFile(path string) (string, map[string]any) {
 	if mime == "application/octet-stream" && len(head) > 4 &&
 		head[0] == 0x1A && head[1] == 0x45 && head[2] == 0xDF && head[3] == 0xA3 {
 		mime = "video/webm"
+	}
+	if (mime == "application/octet-stream" || len(mime) >= 5 && mime[:5] == "text/") && isSVG(head) {
+		mime = "image/svg+xml"
 	}
 	return mime, details
 }

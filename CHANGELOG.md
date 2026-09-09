@@ -4,17 +4,24 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/).
 
 ## [Unreleased]
 
-### Diperbaiki
-- Webshell short-tag (`<?=`, `<%`) dalam run teks pendek kini tertangkap
-  bila satu run berisi keyword payload (tutup lolos shell segmen COM JPEG).
-- Isi chunk teks PNG terkompres (zTXt/iTXt) dibuka + dipindai.
-- Demo web: nama file asli dipertahankan di tmp agar aturan nama core jalan.
+### Ditambahkan
+- Sanitizer SVG opt-in (`allow_ext: ["svg"]`): allowlist elemen/atribut,
+  buang script/event-handler/DOCTYPE/komentar; XML malformed ditolak.
+- Batas pixel flood `max_pixels` (default 100MP) — jpeg/png/gif/webp.
+- Netralisasi nama reserved Windows (`CON`/`NUL`/`COM1`... → `file_CON`).
+- Referensi standar: `docs/REFERENCES.md` + petakan OWASP di COMPARISON.
 
 ### Diubah
 - Wrapper dipecah jadi struktur SDK multi-file (node/php/python/go),
   API tetap sama. Exception PHP satu class satu file (PSR-4 penuh).
 
 ## [0.1.1] — 2026-09-09
+
+### Ditambahkan
+- Webshell short-tag + payload (tutup lolos shell segmen COM JPEG).
+- Pindai isi chunk teks PNG terkompres (zTXt/iTXt).
+- Hook VirusTotal opsional (reputasi hash).
+- Wrapper SDK multi-file; demo web pertahankan nama asli di tmp.
 
 ### Diperbaiki
 - CI rilis: izin publish + build dari folder core.

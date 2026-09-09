@@ -12,3 +12,20 @@ Intinya: GuardCompress menggantikan **lapisan validasi upload**, bukan
 antivirus sistem. Kombinasi ideal untuk situs menengah: GuardCompress di
 titik upload + ClamAV di server (hook `clamav: "auto"`) + backup/verify
 berkala.
+
+## Petakan ke checklist OWASP (jujur)
+
+| Kontrol OWASP File Upload Cheat Sheet | Status kami |
+|---|---|
+| Allowlist ekstensi + validasi tipe (magic) | ✅ `allow_ext` + sniff |
+| Nama acak dari aplikasi (`uuid`) | ✅ `output: "uuid"` |
+| Batas ukuran + panjang nama + karakter | ✅ `max_mb`, 80 char, sanitasi |
+| Simpan di luar webroot / tanpa eksekusi | ⚠️ tugas deployer (kami beri nama aman + `.bin` fallback) |
+| Antivirus bila ada | ✅ hook ClamAV + VirusTotal (opsional) |
+| CDR / image rewriting | ✅ re-encode FFmpeg + sanitasi SVG |
+| Tolak ekstensi ganda eksekusi | ✅ aturan nama |
+| Nama reserved Windows (`CON`/`NUL`...) | ✅ dinetralkan (`file_CON`) |
+| Tolak symlink / cek TOCTOU | ✅ |
+| Batas pixel flood (ASVS V5.2.6) | ✅ `max_pixels` (default 100MP) |
+| Batas dekompresi (ASVS V5.2.3) | ✅ cap 8MB zTXt/iTXt |
+| Autentikasi uploader / rate limit | ⚠️ tugas aplikasi (kami sediakan sinyal `BUSY`/429) |
