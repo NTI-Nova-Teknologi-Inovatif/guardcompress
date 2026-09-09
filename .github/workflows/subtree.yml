@@ -3,27 +3,17 @@ on:
   push:
     tags: ["v*"]
 jobs:
-  split-js:
+  split:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { prefix: wrappers/node, branch: split-js, repo: guardcompress-js }
+          - { prefix: wrappers/php, branch: split-php, repo: guardcompress-php }
+          - { prefix: wrappers/python, branch: split-python, repo: guardcompress-python }
+          - { prefix: wrappers/go, branch: split-go, repo: guardcompress-go }
     steps:
       - uses: actions/checkout@v4
-      - run: git subtree split --prefix=wrappers/node -b split-js
-      - run: git push https://x-access-token:${{ secrets.PAT_JS }}@github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-js.git split-js:main --force
-  split-php:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: git subtree split --prefix=wrappers/php -b split-php
-      - run: git push https://x-access-token:${{ secrets.PAT_PHP }}@github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-php.git split-php:main --force
-  split-python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: git subtree split --prefix=wrappers/python -b split-python
-      - run: git push https://x-access-token:${{ secrets.PAT_PYTHON }}@github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git split-python:main --force
-  split-go:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: git subtree split --prefix=wrappers/go -b split-go
-      - run: git push https://x-access-token:${{ secrets.PAT_GO }}@github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go.git split-go:main --force
+        with: { fetch-depth: 0 }
+      - run: git subtree split --prefix=${{ matrix.prefix }} -b ${{ matrix.branch }}
+      - run: git push https://x-access-token:${{ secrets.SPLIT_PAT }}@github.com/NTI-Nova-Teknologi-Inovatif/${{ matrix.repo }}.git ${{ matrix.branch }}:main --force
