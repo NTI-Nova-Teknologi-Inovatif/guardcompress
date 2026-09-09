@@ -36,6 +36,15 @@ Invoke-WebRequest https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/r
 
 Daftar lengkap yang terbukti tertangkap: [`docs/THREATS.md`](docs/THREATS.md).
 
+## 📁 File yang didukung (15 jenis)
+
+| Gambar | Video | Audio |
+|---|---|---|
+| `jpg` `jpeg` `png` `webp` `gif` | `mp4` `mov` `webm` `mkv` `avi` | `mp3` `wav` `ogg` `oga` `m4a` `flac` |
+
+Selain itu = ditolak (`mime not allowed`). Matriks lengkap (magic numbers,
+output, konversi): [`docs/FILE-TYPES.md`](docs/FILE-TYPES.md).
+
 ## 📦 Instalasi
 
 > **Status: hanya GitHub** (binary v0.1.2 ✅ · FFmpeg menyusul · npm/Packagist/PyPI belum).

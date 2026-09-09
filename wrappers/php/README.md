@@ -21,6 +21,10 @@ composer require guardcompress/php:dev-main \
 php bin/install-binary.php v0.1.0   # unduh binary yang cocok (sekali saja; ffmpeg menyusul)
 ```
 
+## File yang didukung
+
+Gambar: `jpg` `jpeg` `png` `webp` `gif` · Video: `mp4` `mov` `webm` `mkv` `avi` · Audio: `mp3` `wav` `ogg` `oga` `m4a` `flac`. Selain itu ditolak. Matriks lengkap: [FILE-TYPES](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/blob/main/docs/FILE-TYPES.md).
+
 ## Pakai
 
 ```php

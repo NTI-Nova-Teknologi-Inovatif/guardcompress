@@ -23,6 +23,10 @@ npm install NTI-Nova-Teknologi-Inovatif/guardcompress-js
 # Belum ada rilis? installer diam — mode guard-only, tanpa gagalkan install.
 ```
 
+## File yang didukung
+
+Gambar: `jpg` `jpeg` `png` `webp` `gif` · Video: `mp4` `mov` `webm` `mkv` `avi` · Audio: `mp3` `wav` `ogg` `oga` `m4a` `flac`. Selain itu ditolak. Matriks lengkap: [FILE-TYPES](https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/blob/main/docs/FILE-TYPES.md).
+
 ## Pakai
 
 ```js
