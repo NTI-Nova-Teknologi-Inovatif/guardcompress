@@ -14,6 +14,10 @@ jobs:
           - { prefix: wrappers/go, branch: split-go, repo: guardcompress-go }
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - run: git subtree split --prefix=${{ matrix.prefix }} -b ${{ matrix.branch }}
-      - run: git push https://x-access-token:${{ secrets.SPLIT_PAT }}@github.com/NTI-Nova-Teknologi-Inovatif/${{ matrix.repo }}.git ${{ matrix.branch }}:main --force
+      - env:
+          PUSH_TOKEN: ${{ secrets.SPLIT_PAT }}
+        run: git push "https://x-access-token:${PUSH_TOKEN}@github.com/NTI-Nova-Teknologi-Inovatif/${{ matrix.repo }}.git" ${{ matrix.branch }}:main --force
