@@ -13,15 +13,15 @@ binary inti Go — tanpa dependensi npm.
   logika (scan + kompres). Satu file, tanpa install lain.
 - **FFmpeg** = mesin kompres video/gambar/audio, diunduh otomatis.
 
-## Instalasi (via GitHub — npm segera)
+## Instalasi
+
+> **Hanya via GitHub untuk saat ini** — belum ada di npm.
 
 ```bash
 npm install NTI-Nova-Teknologi-Inovatif/guardcompress-js
 # binary + ffmpeg otomatis terunduh saat install (postinstall).
 # Belum ada rilis? installer diam — mode guard-only, tanpa gagalkan install.
 ```
-
-Nanti setelah publish: `npm install guardcompress`.
 
 ## Pakai
 

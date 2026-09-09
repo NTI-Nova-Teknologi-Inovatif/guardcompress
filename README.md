@@ -36,7 +36,11 @@ disimpan adalah hasil render ulang yang bersih.
 - **Karantina opsional + hook ClamAV** bila `clamdscan` tersedia di server.
 - **Nol dependensi** — core Go stdlib-only; semua wrapper stdlib-only.
 
-## Instalasi (via GitHub — berfungsi penuh)
+## Instalasi
+
+> **Status rilis: hanya GitHub** (v0.1.0 + binary). Registry npm /
+> Packagist / PyPI **belum dirilis** — perintah di bawah memakai GitHub
+> langsung dan sudah terbukti jalan.
 
 | Bahasa | Perintah |
 |---|---|
@@ -45,9 +49,8 @@ disimpan adalah hasil render ulang yang bersih.
 | Python | `pip install git+https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git`, lalu `python -m guardcompress.install` |
 | Go | `go get github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go` |
 
-Binary inti otomatis terunduh + verifikasi SHA dari GitHub Releases
-(rilis `v0.1.0` sudah ada). FFmpeg menyusul (mode guard-only sementara).
-Registry npm/Packagist/PyPI segera.
+Binary inti otomatis terunduh + verifikasi SHA dari GitHub Releases.
+FFmpeg menyusul (mode guard-only sementara).
 
 ```bash
 php bin/install-binary.php v0.1.0   # PHP, sekali saja

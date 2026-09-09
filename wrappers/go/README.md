@@ -16,6 +16,8 @@ binary inti — tanpa dependensi modul.
 
 ## Instalasi
 
+> Go tanpa registry — langsung dari GitHub (sudah bisa dipakai).
+
 ```bash
 go get github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go
 ```

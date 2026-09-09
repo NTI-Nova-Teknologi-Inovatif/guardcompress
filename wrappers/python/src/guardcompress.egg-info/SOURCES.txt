@@ -1,0 +1,14 @@
+LICENSE
+README.md
+pyproject.toml
+src/guardcompress/__init__.py
+src/guardcompress/batch.py
+src/guardcompress/client.py
+src/guardcompress/errors.py
+src/guardcompress/install.py
+src/guardcompress/presets.py
+src/guardcompress.egg-info/PKG-INFO
+src/guardcompress.egg-info/SOURCES.txt
+src/guardcompress.egg-info/dependency_links.txt
+src/guardcompress.egg-info/entry_points.txt
+src/guardcompress.egg-info/top_level.txt

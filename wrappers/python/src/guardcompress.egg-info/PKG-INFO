@@ -1,3 +1,24 @@
+Metadata-Version: 2.4
+Name: guardcompress
+Version: 0.1.0
+Summary: Keamanan + kompresi upload untuk Python (Django/Flask/FastAPI). Binary inti Go + ffmpeg otomatis terunduh saat install.
+Author: NTI (Nova Teknologi Inovatif)
+License: MIT
+Project-URL: Homepage, https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress
+Project-URL: Issues, https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/issues
+Keywords: upload,security,antivirus,webshell,image-compression,ffmpeg,django,flask
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Security
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
 # GuardCompress for Python
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -13,14 +34,14 @@ binary inti Go — tanpa dependensi pip.
 - **Binary inti** = program Go yang berisi SEMUA logika (scan + kompres).
 - **FFmpeg** = mesin kompres, diunduh otomatis oleh installer.
 
-## Instalasi
-
-> **Hanya via GitHub untuk saat ini** — belum ada di PyPI.
+## Instalasi (via GitHub — PyPI segera)
 
 ```bash
 pip install git+https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git
 python -m guardcompress.install   # unduh binary + ffmpeg (sekali saja)
 ```
+
+Nanti setelah publish: `pip install guardcompress`.
 
 ## Pakai
 

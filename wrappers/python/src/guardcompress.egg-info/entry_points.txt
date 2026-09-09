@@ -1,0 +1,2 @@
+[console_scripts]
+guardcompress-install = guardcompress.install:main

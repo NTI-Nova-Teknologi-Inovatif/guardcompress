@@ -11,15 +11,15 @@ binary inti Go — tanpa dependensi composer.
 - **Binary inti** = program Go yang berisi SEMUA logika (scan + kompres).
 - **FFmpeg** = mesin kompres, diunduh otomatis oleh installer.
 
-## Instalasi (via GitHub — Packagist segera)
+## Instalasi
+
+> **Hanya via GitHub untuk saat ini** — belum ada di Packagist.
 
 ```bash
 composer require guardcompress/php:dev-main \
   --repository='{"type":"vcs","url":"https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-php"}'
 php bin/install-binary.php v0.1.0   # unduh binary yang cocok (sekali saja)
 ```
-
-Nanti setelah publish: `composer require guardcompress/php`.
 
 ## Pakai
 
