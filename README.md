@@ -36,18 +36,18 @@ disimpan adalah hasil render ulang yang bersih.
 - **Karantina opsional + hook ClamAV** bila `clamdscan` tersedia di server.
 - **Nol dependensi** — core Go stdlib-only; semua wrapper stdlib-only.
 
-## Instalasi (via GitHub — registry segera)
+## Instalasi (via GitHub — berfungsi penuh)
 
-| Bahasa | Sekarang | Nanti |
-|---|---|---|
-| PHP | composer via VCS `NTI-Nova-Teknologi-Inovatif/guardcompress-php` | `composer require guardcompress/php` |
-| Node | `npm install NTI-Nova-Teknologi-Inovatif/guardcompress-js` | `npm install guardcompress` |
-| Python | `pip install git+https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git` | `pip install guardcompress` |
-| Go | `go get github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go` | sama (Go langsung dari GitHub) |
+| Bahasa | Perintah |
+|---|---|
+| PHP | composer via VCS `NTI-Nova-Teknologi-Inovatif/guardcompress-php`, lalu `php bin/install-binary.php` |
+| Node | `npm install NTI-Nova-Teknologi-Inovatif/guardcompress-js` |
+| Python | `pip install git+https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-python.git`, lalu `python -m guardcompress.install` |
+| Go | `go get github.com/NTI-Nova-Teknologi-Inovatif/guardcompress-go` |
 
-Binary inti + FFmpeg diunduh otomatis saat instalasi (postinstall) dari
-GitHub Releases — cocok dengan OS/arch mesin. Belum ada rilis? Installer
-diam (mode guard-only), tidak menggagalkan install. Atau override manual:
+Binary inti otomatis terunduh + verifikasi SHA dari GitHub Releases
+(rilis `v0.1.0` sudah ada). FFmpeg menyusul (mode guard-only sementara).
+Registry npm/Packagist/PyPI segera.
 
 ```bash
 php bin/install-binary.php v0.1.0   # PHP, sekali saja
