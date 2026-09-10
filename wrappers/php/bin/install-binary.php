@@ -3,7 +3,7 @@
 // Usage: php bin/install-binary.php [version]
 declare(strict_types=1);
 
-$version = $argv[1] ?? getenv('GUARDCOMPRESS_VERSION') ?: 'v0.1.0';
+$version = $argv[1] ?? getenv('GUARDCOMPRESS_VERSION') ?: 'v0.1.3';
 $os = strtolower(PHP_OS_FAMILY);
 $arch = php_uname('m');
 $arch = (stripos($arch, 'arm') !== false || stripos($arch, 'aarch64') !== false) ? 'arm64' : 'amd64';

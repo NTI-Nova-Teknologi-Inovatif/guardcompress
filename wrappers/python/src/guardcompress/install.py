@@ -27,7 +27,7 @@ def _fetch(url: str, timeout=60) -> bytes | None:
 
 
 def main(version: str | None = None) -> int:
-    version = version or os.environ.get("GUARDCOMPRESS_VERSION", "v0.1.0")
+    version = version or os.environ.get("GUARDCOMPRESS_VERSION", "v0.1.3")
     base = os.environ.get(
         "GUARDCOMPRESS_RELEASE_BASE",
         "https://github.com/NTI-Nova-Teknologi-Inovatif/guardcompress/releases/download",
