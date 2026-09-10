@@ -5,12 +5,15 @@ GuardCompress (kode kami) berlisensi **MIT** (lihat `LICENSE`).
 ## FFmpeg (binary, TIDAK dikomit ke repo)
 
 - Build diunduh maintainer saat menyiapkan rilis, lalu diunggah ke GitHub Releases + `CHECKSUMS.txt`.
-- WAJIB varian **LGPL** (misal `*-essentials_build.zip`). Jangan varian `full_build`/`gpl` kecuali siap mematuhi GPL penuh.
+- Varian **GPL** (wajib — pipeline kami butuh encoder `libx264` yang
+  memang GPL). Kode GuardCompress tetap MIT (binary terpisah, tanpa link).
 - Kewajiban redistribute:
   1. Cantumkan atribusi + link sumber di halaman rilis.
-  2. Sertakan teks lisensi LGPL (`COPYING.LGPLv2.1`) di arsip rilis.
-  3. Sediakan link source ffmpeg sesuai versinya (lihat `docs/FFMPEG.md`).
-- Sumber build independen: GyanD/codexffmpeg, BtbN/FFmpeg-Builds, johnvansickle.com, evermeet.cx.
+  2. Sertakan teks lisensi GPL (`COPYING.GPLv3`) di arsip rilis.
+  3. Sediakan link source ffmpeg yang sesuai versinya
+     (lihat `docs/FFMPEG.md`).
+- Sumber build independen: BtbN/FFmpeg-Builds (linux), GyanD/codexffmpeg
+  (windows), evermeet.cx (macOS, build Intel → Rosetta 2 di Apple Silicon).
 
 ## ClamAV (opsional, tidak dibundel)
 

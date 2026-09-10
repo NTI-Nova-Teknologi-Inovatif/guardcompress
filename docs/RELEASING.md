@@ -2,8 +2,8 @@
 
 ## 1. Siapkan binary FFmpeg (sekali per update FFmpeg)
 
-> Wajib varian **LGPL** (bukan `full`/`gpl`) + catat atribusi.
-> Lihat `docs/FFMPEG.md` untuk daftar sumber upstream.
+> Wajib varian **GPL** (pipeline butuh `libx264`) + catat atribusi +
+> sertakan `COPYING.GPLv3` + link source. Lihat `docs/FFMPEG.md`.
 
 | OS | File upstream | Rename jadi |
 |---|---|---|

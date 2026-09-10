@@ -19,7 +19,7 @@ Bahasa manusia untuk istilah yang muncul di repo ini.
 | **Verify** | Perintah memastikan file simpanan tidak berubah setelah lolos (`verify --expect-sha256`). |
 | **Doctor** | Perintah cek kapasitas mesin (CPU, ffmpeg ada/tidak, jobs rekomendasi). |
 | **YARA rules** | Pola deteksi malware (`core/rules/`) — dipakai penuh di v2. |
-| **LGPL** | Lisensi FFmpeg: boleh redistribute binary asal atribusi + sertakan teks lisensi + link source. Lihat `docs/THIRD-PARTY-NOTICES.md`. |
+| **LGPL/GPL** | Lisensi FFmpeg: kami redistribute build **GPL** (butuh `libx264`) + atribusi + teks lisensi + link source. Kode kami tetap MIT (binary terpisah). Lihat `docs/THIRD-PARTY-NOTICES.md`. |
 | **Chunk PNG** | Potongan data dalam PNG (`IHDR`, `IDAT`, `tEXt`, `zTXt`...). `zTXt`/`iTXt` boleh terkompres — isinya dibuka + dipindai. |
 | **Segmen COM** | Kolom komentar dalam JPEG — tempat favorit menyembunyikan webshell. Dipindai. |
 | **Polyglot** | Satu file yang valid sebagai dua jenis (misal JPEG sekaligus PHP). Ditolak via token/nama. |

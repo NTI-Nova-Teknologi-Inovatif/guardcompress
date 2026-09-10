@@ -12,10 +12,10 @@ CHECKSUMS.txt   # sha256 untuk SEMUA file di atas
 
 ## Cara maintainer menyiapkan ffmpeg static (sekali per update ffmpeg)
 
-Sumber upstream terpercaya:
-- Linux: `https://johnvansickle.com/ffmpeg/` (static amd64/arm64)
+Sumber upstream terpercaya (varian **GPL** — pipeline butuh `libx264`):
+- Linux amd64/arm64: `https://github.com/BtbN/FFmpeg-Builds/releases` (file `ffmpeg-n*-latest-linux{64,arm64}-gpl-*.tar.xz`, ambil `bin/ffmpeg`)
 - Windows: `https://github.com/GyanD/codexffmpeg/releases` (file `*-essentials_build.zip`, ambil `bin/ffmpeg.exe`)
-- macOS: `https://evermeet.cx/ffmpeg/` atau `osxexperts`
+- macOS arm64: `https://evermeet.cx/ffmpeg/getrelease/zip` (build Intel → jalan via Rosetta 2)
 
 Langkah:
 1. Download upstream, extract `ffmpeg` / `ffmpeg.exe` saja.

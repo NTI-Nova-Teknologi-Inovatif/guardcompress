@@ -139,7 +139,7 @@ Ngoding di monorepo ini; 4 repo bahasa tersinkron otomatis:
 - Satu lapis pertahanan — **bukan** pengganti AV enterprise/pentest. Batas jujur di [`docs/THREATS.md`](docs/THREATS.md).
 - Lapor celah **privat** (jangan issue publik): [`.github/SECURITY.md`](.github/SECURITY.md).
 - 100% lokal, tanpa telemetri (kecuali hook VirusTotal yang kamu nyalakan sendiri).
-- Kode **MIT** ([LICENSE](LICENSE)) · FFmpeg LGPL ([docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md)) · Kontribusi: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
+- Kode **MIT** ([LICENSE](LICENSE)) · FFmpeg GPL ([docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md)) · Kontribusi: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ## 💻 Dev lokal
 
