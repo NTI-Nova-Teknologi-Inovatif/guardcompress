@@ -47,6 +47,18 @@ func FindFFmpeg() string {
 	if p, err := exec.LookPath("ffmpeg"); err == nil {
 		return p
 	}
+	for _, c := range []string{
+		filepath.Join(CacheDir(), "ffmpeg"),
+		filepath.Join(CacheDir(), "ffmpeg.exe"),
+		filepath.Join(CacheDir(), "ffmpeg-linux-amd64"),
+		filepath.Join(CacheDir(), "ffmpeg-linux-arm64"),
+		filepath.Join(CacheDir(), "ffmpeg-windows-amd64.exe"),
+		filepath.Join(CacheDir(), "ffmpeg-darwin-arm64"),
+	} {
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
 	return ""
 }
 

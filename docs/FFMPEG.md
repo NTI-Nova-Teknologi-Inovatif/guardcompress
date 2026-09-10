@@ -28,9 +28,10 @@ Langkah:
 
 ## Urutan pencarian ffmpeg oleh Core (`compress.FindFFmpeg`)
 
-1. env `GUARDCOMPRESS_FFMPEG` (di-set installer ke hasil download cache)
+1. env `GUARDCOMPRESS_FFMPEG` (override manual)
 2. `ffmpeg(.exe)` di sebelah binary core
 3. `ffmpeg` di PATH (milik admin — bonus, bukan syarat)
+4. `~/.cache/guardcompress/ffmpeg[-os-arch]` (hasil download installer — tanpa set env pun ketemu)
 
 Tidak ketemu semua = **mode guard-only** (cek keamanan jalan, kompres jadi copy + peringatan di `doctor`).
 
